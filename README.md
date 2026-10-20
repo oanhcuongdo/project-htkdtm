@@ -1,12 +1,12 @@
 # Hướng Dẫn Nộp Mã Nguồn Và Báo Cáo Đồ Án (Hệ Thống Kinh Doanh Thương Mại)
 
-Kho lưu trữ này được thiết lập để quản lý và thu thập mã nguồn, báo cáo đồ án của các nhóm sinh viên học phần Hệ Thống Kinh Doanh Thương Mại (HTKDTM). Sinh viên thực hiện nộp bài thông qua hệ thống Git và GitHub theo đúng các quy chuẩn kỹ thuật được mô tả dưới đây.
+Kho lưu trữ này được thiết lập để quản lý và thu thập mã nguồn, báo cáo đồ án của các nhóm sinh viên học phần Hệ Thống Kinh Doanh Thương Mại (HTKDTM). Sinh viên thực hiện tham gia, phát triển và nộp bài thông qua hệ thống Git và GitHub theo đúng các quy chuẩn kỹ thuật được mô tả dưới đây.
 
 ---
 
 ## 1. Quy Chuẩn Đặt Tên Thư Mục Nhóm
 
-Mỗi nhóm sinh viên bắt buộc phải tạo một thư mục riêng biệt tại thư mục gốc của kho lưu trữ này.
+Mỗi nhóm sinh viên bắt buộc phải tạo duy nhất một thư mục riêng biệt tại cấp cao nhất (root) của kho lưu trữ.
 
 ### 1.1. Cấu trúc định danh thư mục
 - **Cú pháp quy định:** `<ten-nhom>-<ten-lop>`
@@ -71,106 +71,166 @@ project-htkdtm/
 
 ---
 
-## 4. Quy Trình Nộp Bài Bằng Git Và GitHub
+## 4. Hướng Dẫn Cấu Hình Và Tham Gia Dự Án Dành Cho Sinh Viên
 
-Quy trình nộp bài được thực hiện theo mô hình **Fork & Pull Request** chuẩn của GitHub nhằm đảm bảo tính toàn vẹn và minh bạch mã nguồn.
+Mọi sinh viên trước khi thực hiện thao tác mã nguồn cần hoàn tất các bước chuẩn bị sau:
 
-### Cách 1: Quy trình Fork và Pull Request (Khuyến nghị chuẩn)
+### 4.1. Chuẩn bị tài khoản GitHub
+- Mỗi sinh viên cần có một tài khoản GitHub cá nhân đang hoạt động.
+- Gửi tài khoản GitHub (Username) cho giảng viên hoặc nhóm trưởng để được cấp quyền cộng tác (Collaborator) hoặc thực hiện theo luồng Fork.
 
-#### Bước 1: Fork kho lưu trữ
-- Truy cập vào trang chủ kho lưu trữ: `https://github.com/oanhcuongdo/project-htkdtm`.
-- Nhấn nút **Fork** (nằm ở góc trên bên phải giao diện GitHub) để tạo bản sao kho lưu trữ về tài khoản GitHub của nhóm trưởng hoặc thành viên đại diện.
-
-#### Bước 2: Clone kho lưu trữ đã fork về máy tính cục bộ
-Mở Terminal / Command Prompt / Git Bash và thực hiện lệnh:
+### 4.2. Cấu hình định danh tác giả trên máy cục bộ
+Để lịch sử commit ghi nhận chính xác danh tính sinh viên, mở Terminal / Git Bash và thiết lập:
 ```bash
-git clone https://github.com/<tai-khoan-github-cua-ban>/project-htkdtm.git
+git config --global user.name "Họ và Tên Sinh Viên"
+git config --global user.email "email_sinh_vien@example.com"
+```
+*Lưu ý:* `email_sinh_vien@example.com` phải trùng khớp với email đã đăng ký trên tài khoản GitHub.
+
+### 4.3. Lấy mã nguồn dự án về máy cục bộ
+```bash
+git clone https://github.com/oanhcuongdo/project-htkdtm.git
 cd project-htkdtm
 ```
 
-#### Bước 3: Tạo nhánh (Branch) làm việc mới
-Tạo và chuyển sang nhánh riêng biệt mang tên nhóm:
+---
+
+## 5. Quy Chuẩn Commit Và Push Mã Nguồn Vào Đúng Thư Mục Nhóm
+
+Để đảm bảo không ảnh hưởng đến mã nguồn của nhóm khác và giữ cấu trúc kho lưu trữ chuẩn xác, sinh viên phải tuân thủ nghiêm ngặt quy trình dưới đây.
+
+### 5.1. Quy tắc an toàn bắt buộc khi thao tác tệp
+- **Chỉ làm việc bên trong thư mục nhóm:** Mọi tệp tin mới tạo hoặc sửa đổi bắt buộc phải nằm trong đường dẫn `<tennhom-tenlop>/`.
+- **Không sử dụng lệnh `git add .` ở thư mục gốc:** Thao tác này dễ vô tình đưa cả các tệp ngoài ý muốn hoặc tệp của nhóm khác vào commit.
+- **Luôn chỉ định cụ thể thư mục nhóm khi `git add`:**
+  ```bash
+  git add <tennhom-tenlop>/
+  ```
+
+### 5.2. Trình tự các bước thực hiện commit và push
+
+#### Bước 1: Cập nhật mã nguồn mới nhất từ remote trước khi sửa
+Tránh xung đột mã nguồn bằng cách kéo dữ liệu mới nhất về nhánh làm việc:
+```bash
+git checkout main
+git pull origin main
+```
+
+#### Bước 2: Tạo hoặc chuyển sang nhánh làm việc của nhóm
+Mỗi nhóm làm việc trên một nhánh riêng biệt:
 ```bash
 git checkout -b feature/<tennhom-tenlop>
 ```
 *Ví dụ:* `git checkout -b feature/nhom01-dhti15a1hn`
 
-#### Bước 4: Tạo thư mục nhóm và thêm mã nguồn
-1. Tạo thư mục nhóm theo đúng cú pháp: `mkdir nhom01-dhti15a1hn`
-2. Sao chép tệp mẫu danh sách nhóm:
-   - Trên Linux/macOS: `cp _template_nhom/danhsachnhom.md nhom01-dhti15a1hn/danhsachnhom.md`
-   - Trên Windows PowerShell: `Copy-Item -Path _template_nhom\danhsachnhom.md -Destination nhom01-dhti15a1hn\danhsachnhom.md`
-3. Mở tệp `nhom01-dhti15a1hn/danhsachnhom.md`, cập nhật chính xác toàn bộ thông tin thành viên và đề tài của nhóm.
-4. Đặt mã nguồn, tài liệu vào đúng thư mục nhóm.
+#### Bước 3: Tạo thư mục nhóm và sao chép biểu mẫu danh sách (nếu chưa có)
+Nếu nhóm chưa có thư mục trên kho lưu trữ:
+1. Tạo thư mục:
+   ```bash
+   mkdir nhom01-dhti15a1hn
+   ```
+2. Sao chép tệp `danhsachnhom.md` từ thư mục mẫu:
+   - Trên Linux/macOS:
+     ```bash
+     cp _template_nhom/danhsachnhom.md nhom01-dhti15a1hn/danhsachnhom.md
+     ```
+   - Trên Windows PowerShell:
+     ```powershell
+     Copy-Item -Path _template_nhom\danhsachnhom.md -Destination nhom01-dhti15a1hn\danhsachnhom.md
+     ```
+3. Mở tệp `nhom01-dhti15a1hn/danhsachnhom.md`, điền đầy đủ và chính xác thông tin các thành viên.
 
-#### Bước 5: Kiểm tra trạng thái và commit
-Kiểm tra các tệp tin đã thêm mới, đảm bảo không có tệp thừa:
+#### Bước 4: Thêm mã nguồn và tài liệu vào thư mục nhóm
+Sao chép toàn bộ thư mục `src/`, `docs/` vào đúng vị trí:
+```text
+nhom01-dhti15a1hn/
+├── danhsachnhom.md
+├── docs/
+└── src/
+```
+
+#### Bước 5: Kiểm tra trạng thái tệp tin bằng `git status`
+Trước khi đưa tệp vào staging, chạy lệnh kiểm tra:
 ```bash
 git status
 ```
-Thêm toàn bộ thư mục của nhóm vào khu vực theo dõi (Staging Area):
+*Yêu cầu kiểm tra:* Danh sách tệp hiển thị ở mục `Untracked files` hoặc `Changes not staged for commit` bắt buộc chỉ bắt đầu bằng `<tennhom-tenlop>/`. Nếu xuất hiện tệp ở ngoài thư mục nhóm, phải di chuyển tệp về đúng vị trí trước khi tiếp tục.
+
+#### Bước 6: Đưa tệp vào khu vực theo dõi (Staging Area)
+Chỉ định rõ ràng thư mục nhóm:
 ```bash
 git add nhom01-dhti15a1hn/
 ```
-Tạo commit với thông điệp rõ ràng theo chuẩn:
+
+Kiểm tra lại lần nữa để đảm bảo chỉ có tệp của nhóm được stage:
 ```bash
-git commit -m "feat(nhom01-dhti15a1hn): nop ma nguon va danh sach thanh vien"
+git status
 ```
 
-#### Bước 6: Đẩy nhánh lên GitHub cá nhân
+#### Bước 7: Thực hiện commit
+Commit với thông điệp rõ ràng, tuân thủ cấu trúc chuẩn:
+```bash
+git commit -m "feat(nhom01-dhti15a1hn): nop ma nguon backend va danh sach nhom"
+```
+Cú pháp thông điệp commit: `<loại-thay-đổi>(<tennhom-tenlop>): <mô-tả-ngắn-gọn>`
+- `feat`: Thêm chức năng mới, mã nguồn mới.
+- `fix`: Sửa lỗi mã nguồn.
+- `docs`: Cập nhật tài liệu, tệp danhsachnhom.md.
+
+#### Bước 8: Đẩy nhánh lên GitHub (Push)
+Đẩy nhánh lên remote repository:
 ```bash
 git push -u origin feature/<tennhom-tenlop>
 ```
+*Ví dụ:* `git push -u origin feature/nhom01-dhti15a1hn`
 
-#### Bước 7: Mở Pull Request (PR) về kho lưu trữ gốc
-1. Truy cập vào kho lưu trữ đã fork trên giao diện web GitHub.
-2. Nhấn nút **Compare & pull request**.
-3. Thiết lập thông số:
-   - **Base repository:** `oanhcuongdo/project-htkdtm` - **Base branch:** `main`
-   - **Head repository:** `<tai-khoan-cua-ban>/project-htkdtm` - **Compare branch:** `feature/<tennhom-tenlop>`
-4. Đặt tiêu đề Pull Request theo cú pháp:
+#### Bước 9: Mở Pull Request (PR) và kiểm tra lại vị trí tệp
+1. Truy cập vào kho lưu trữ: `https://github.com/oanhcuongdo/project-htkdtm`.
+2. Chọn **Compare & pull request** cho nhánh vừa đẩy.
+3. Kiểm tra mục **Files changed** (Các tệp thay đổi): Đảm bảo 100% đường dẫn tệp đều có tiền tố `<tennhom-tenlop>/...`.
+4. Đặt tiêu đề Pull Request:
    ```text
    [Nộp bài] <tennhom-tenlop> - <Tên đề tài>
    ```
-   *Ví dụ:* `[Nộp bài] nhom01-dhti15a1hn - He Thong Quan Ly Ban Hang Truc Tuyen`
-5. Trong phần mô tả Pull Request, ghi rõ danh sách thành viên và các nội dung đã hoàn thành.
-6. Nhấn **Create pull request** để hoàn tất nộp bài.
+5. Nhấn **Create pull request**.
 
 ---
 
-### Cách 2: Quy trình đẩy trực tiếp (Áp dụng khi sinh viên được cấp quyền Collaborator)
+## 6. Xử Lý Các Sự Cố Thường Gặp
 
-Trường hợp sinh viên được mời làm cộng tác viên trực tiếp (Collaborator) trên kho lưu trữ:
+### 6.1. Xử lý khi lỡ thêm (add) tệp nhầm ngoài thư mục nhóm
+Nếu chạy `git status` và thấy có tệp nằm ngoài thư mục nhóm đã bị đưa vào Staging:
+```bash
+# Hủy staging tệp bị nhầm
+git reset HEAD <duong-dan-tep-bi-nham>
 
-1. Clone trực tiếp kho lưu trữ gốc:
-   ```bash
-   git clone https://github.com/oanhcuongdo/project-htkdtm.git
-   cd project-htkdtm
-   ```
-2. Tạo nhánh làm việc của nhóm:
-   ```bash
-   git checkout -b feature/<tennhom-tenlop>
-   ```
-3. Tạo thư mục nhóm, thêm mã nguồn và cập nhật `danhsachnhom.md`.
-4. Commit và đẩy nhánh lên kho lưu trữ:
-   ```bash
-   git add nhom01-dhti15a1hn/
-   git commit -m "feat(nhom01-dhti15a1hn): nop ma nguon do an"
-   git push -u origin feature/<tennhom-tenlop>
-   ```
-5. Mở Pull Request từ nhánh `feature/<tennhom-tenlop>` vào nhánh `main` để giảng viên phê duyệt và hợp nhất (merge).
+# Di chuyển tệp về đúng thư mục nhóm
+mv <duong-dan-tep> <tennhom-tenlop>/
+```
+
+### 6.2. Xử lý khi bị từ chối push (rejected - non-fast-forward)
+Khi có thành viên khác trong nhóm hoặc nhóm khác đã đẩy commit lên nhánh trước bạn:
+```bash
+git pull --rebase origin feature/<tennhom-tenlop>
+git push origin feature/<tennhom-tenlop>
+```
+
+### 6.3. Giữ nhánh cá nhân luôn cập nhật với nhánh `main` mới nhất
+```bash
+git checkout feature/<tennhom-tenlop>
+git fetch origin
+git merge origin/main
+```
 
 ---
 
-## 5. Danh Sách Kiểm Tra Trước Khi Nộp Bài (Checklist)
+## 7. Danh Sách Kiểm Tra Trước Khi Nộp Bài (Checklist)
 
-Trước khi gửi Pull Request hoặc hoàn tất nộp bài, đại diện nhóm phải kiểm tra lại các mục sau:
-
-| STT | Hạng mục kiểm tra | Tiêu chuẩn đạt yêu cầu | Trạng thái |
+| STT | Tiêu chí kiểm tra | Yêu cầu kỹ thuật | Trạng thái |
 | :-: | :--- | :--- | :-: |
-| 1 | Tên thư mục nhóm | Đúng định dạng `<tennhom-tenlop>`, toàn bộ chữ thường, không dấu, không cách. | Bắt buộc |
-| 2 | Tệp `danhsachnhom.md` | Nằm trực tiếp trong thư mục nhóm, điền đầy đủ họ tên, MSSV, vai trò, đóng góp. | Bắt buộc |
-| 3 | Tệp `.gitignore` | Không commit thư mục rác (`node_modules/`, `venv/`, file `.env`, tệp build). | Bắt buộc |
-| 4 | Mã nguồn dự án | Nằm gọn trong thư mục nhóm, có đầy đủ các tệp cần thiết để chạy chương trình. | Bắt buộc |
-| 5 | Tệp hướng dẫn chạy | Đã hướng dẫn chi tiết cách cài đặt và chạy mã nguồn trong `danhsachnhom.md`. | Bắt buộc |
-| 6 | Độc lập tệp tin | Không chỉnh sửa hoặc can thiệp vào thư mục của các nhóm khác. | Bắt buộc |
+| 1 | Cú pháp tên thư mục | Đúng định dạng `<tennhom-tenlop>`, toàn bộ chữ thường, không dấu, không khoảng trắng. | Bắt buộc |
+| 2 | Vị trí tệp tin | 100% tệp tin của nhóm nằm trọn vẹn trong thư mục `<tennhom-tenlop>/`. | Bắt buộc |
+| 3 | Tệp `danhsachnhom.md` | Có mặt tại thư mục gốc của nhóm, điền đầy đủ thông tin thành viên và phân công. | Bắt buộc |
+| 4 | Kiểm soát tệp tin rác | Không commit `node_modules/`, `venv/`, `.env`, tệp tạm IDE, tệp nhị phân nén lớn. | Bắt buộc |
+| 5 | Lệnh `git add` | Luôn sử dụng `git add <tennhom-tenlop>/`, không `git add .` tại thư mục gốc. | Bắt buộc |
+| 6 | Tính toàn vẹn nhánh chung | Không sửa đổi, không xóa thư mục hoặc mã nguồn của các nhóm khác. | Bắt buộc |
