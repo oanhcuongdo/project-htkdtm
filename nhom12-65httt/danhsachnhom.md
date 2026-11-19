@@ -13,11 +13,11 @@
 
 | STT | Họ và Tên | Mã Sinh Viên | Lớp Sinh Hoạt | Vai Trò | Nhiệm Vụ Phân Công | Tỷ Lệ Đóng Góp (%) | Email |
 | :-: | :--- | :-: | :-: | :--- | :--- | :-: | :--- |
-| 1 | [Phạm Văn Tài] | [2351160547] | [65HTTT] | Nhóm trưởng |  |  | 2351160547@tlu.edu.vn |
-| 2 | [Vũ Thị Hồng] | [2351160524] | [65HTTT] | Thành viên |  |  | 2351160524@tlu.edu.vn |
-| 3 | [Nguyễn Quang Khải] | [2351160530] | [65HTTT] | Thành viên |  |  | 2351160530@tlu.edu.vn |
-| 4 | [Nguyễn Tài Tân] | [2351160550] | 65HTTT | Thành viên |  |  | 2351160550@tlu.edu.vn |
-| 5 | [Phạm Đình Việt] | [2351160565] | 65HTTT | Thành viên |  |  | 2351160565@tlu.edu.vn |
+| 1 | [Phạm Văn Tài] | [2351160547] | [65HTTT] | Nhóm trưởng |  | 20% | 2351160547@ư.tlu.edu.vn |
+| 2 | [Vũ Thị Hồng] | [2351160524] | [65HTTT] | Thành viên |  | 20% | 2351160524@e.tlu.edu.vn |
+| 3 | [Nguyễn Quang Khải] | [2351160530] | [65HTTT] | Thành viên |  |20%  | 2351160530@e.tlu.edu.vn |
+| 4 | [Nguyễn Tài Tân] | [2351160550] | 65HTTT | Thành viên |  | 20% | 2351160550@e.tlu.edu.vn |
+| 5 | [Phạm Đình Việt] | [2351160565] | 65HTTT | Thành viên |  | 20% | 2351160565@e.tlu.edu.vn |
 
 ---
 
