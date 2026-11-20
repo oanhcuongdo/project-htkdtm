@@ -1,0 +1,29 @@
+# Thư mục kế hoạch và tài liệu theo dõi tiến độ nội bộ
+docs/planning/
+planning/
+
+# Cấu hình môi trường và API Keys
+.env
+*.env
+
+# Python byte-compiled / cache files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Môi trường ảo (Virtual environments)
+venv/
+.venv/
+env/
+ENV/
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Hệ điều hành
+.DS_Store
+Thumbs.db
