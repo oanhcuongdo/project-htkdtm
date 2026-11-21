@@ -1,5 +1,10 @@
 # Frontend - Hệ Thống Tìm Kiếm Nhà Thuê Thông Minh
-
+1.Các chức năng giao diện: Trang chủ, tìm kiếm, bộ lọc, bản đồ, chi tiết phòng trọ, trợ lý AI và Dashboard.
+2.Cấu hình môi trường: File .env và địa chỉ API Backend.
+3.Cài đặt và khởi chạy: Hướng dẫn npm install, npm run dev, npm run build.
+4.Quy ước phát triển: Cách tổ chức components, hooks, services và pages.
+5.Tích hợp API: Mô tả cách Frontend giao tiếp với FastAPI.
+6.Giao diện Responsive: Hỗ trợ Desktop, Tablet và Mobile.
 ## Công Nghệ Đề Xuất (Theo Đề Cương)
 - **Framework:** React 18 / 19 (Vite)
 - **Styling:** Tailwind CSS + Lucide Icons / Shadcn UI
