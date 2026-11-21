@@ -1,6 +1,8 @@
 # Danh sách nhóm và phân chia nhiệm vụ
-
-**Đề tài:** Hệ thống Quản lý Tài chính Cá nhân Thông minh tích hợp thu thập dữ liệu tự động, AI phân loại và dự báo, trực quan hóa bằng Apache Superset.
+**Tên nhóm:** nhom13-65httt
+**Tên lớp học phần:** Hệ thống kinh doanh thông minh
+**Tên đề tài:** Hệ thống Quản lý Tài chính Cá nhân Thông minh tích hợp thu thập dữ liệu tự động, AI phân loại và dự báo, trực quan hóa bằng Apache Superset.
+**Giảng viên hướng dẫn:** Đỗ Oanh Cường
 
 ## Thành viên và nhiệm vụ
 
