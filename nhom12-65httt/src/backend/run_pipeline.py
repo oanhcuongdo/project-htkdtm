@@ -18,6 +18,7 @@ logging.basicConfig(
     handlers=[logging.StreamHandler(sys.stdout)]
 )
 logger = logging.getLogger("SmartRentCrawler")
+const str = ""
 
 def main():
     parser = argparse.ArgumentParser(description="Thu thập và Lưu trữ dữ liệu Nhà Thuê Thông Minh lên Supabase")
