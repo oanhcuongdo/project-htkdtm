@@ -1,0 +1,26 @@
+# Gitignore riêng của nhóm 03 (bổ sung cho .gitignore ở thư mục gốc, không sửa file dùng chung của lớp).
+# Repo CÔNG KHAI: không được commit dữ liệu thô/đã làm sạch hay trọng số mô hình.
+
+# --- Dữ liệu: thô (raw), đã làm sạch (clean), kết quả thu thập ---
+data/*
+!data/README.md
+# Mọi file CSV bị bỏ qua; chỉ dữ liệu mẫu nhỏ, tự tạo (không phải đánh giá thật) mới được đưa vào seed
+*.csv
+!src/database/seed/*.csv
+
+# --- Trọng số mô hình (PhoBERT, LightGBM, ...): lưu ngoài Git, xem models/README.md ---
+models/*
+!models/README.md
+*.safetensors
+*.ckpt
+*.pt
+*.pth
+*.onnx
+pytorch_model*.bin
+*.joblib
+*.pkl
+
+# --- Khóa và biến môi trường ---
+.env
+.env.*
+!.env.example

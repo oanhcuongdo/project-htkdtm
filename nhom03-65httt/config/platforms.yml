@@ -1,0 +1,115 @@
+# Cấu hình nền tảng E-learning của EduVision BI.
+# Mục tiêu: THÊM MỘT NỀN TẢNG = THÊM MỘT KHỐI trong file này (không sửa mã).
+#
+# Lưu ý trạng thái: các script thu thập hiện tại (collect_reviews.py, collect_youtube.py, collect_news.py,
+# collect_context.py) vẫn khai báo nền tảng trong mã. Khi chuyển collector vào src/etl/collectors/, cần cho chúng
+# ĐỌC file này; việc đó chưa làm.
+#
+# Mã ứng dụng (play_id, ios_id) đã được kiểm chứng bằng tên + nhà phát hành khớp, không đoán.
+# Cách thêm nền tảng mới: (1) tìm play_id, ios_id và kiểm tra nhà phát hành, (2) điền khối mới theo mẫu dưới đây,
+# (3) chạy bước thăm dò khả thi, nền tảng đạt ngưỡng 300 đánh giá tiếng Việt thì mới đưa vào phân tích.
+
+defaults:
+  stores: [google_play, app_store_vn]
+  feasibility:              # ngưỡng verdict (số đánh giá tiếng Việt có nội dung, từ 3 từ trở lên)
+    dat: 300
+    mong: 100
+  youtube:
+    max_comments_per_video: 150
+    min_sleep_seconds: 2
+  news:
+    since: "2025-01-01"
+  # platform_group: trong_nuoc | quoc_te (quy ước của nhóm, sửa tại đây)
+
+platforms:
+  # ---------------- Nền tảng chính (trong nước) ----------------
+  - id: ELSA Speak
+    platform_group: trong_nuoc          # pháp nhân ở Mỹ nhưng do người Việt sáng lập, đội ngũ chính ở Việt Nam
+    role: du_bao_chinh                  # chuỗi dày nhất, dùng cho dự báo (M3)
+    play_id: us.nobarriers.elsa
+    ios_id: "1083804886"
+    trends_keyword: ELSA Speak
+    news: {keywords: ['"ELSA Speak"'], title_match: '\belsa\b'}
+    youtube_queries: ["ELSA Speak review"]
+
+  - id: VUIHOC
+    platform_group: trong_nuoc
+    role: du_bao_chinh
+    play_id: vn.vuihoc
+    ios_id: "1532853682"
+    trends_keyword: Vuihoc
+    news: {keywords: ['"VUIHOC"', '"Vuihoc.vn"'], title_match: 'vuihoc|vui học'}
+    youtube_queries: ["Vuihoc review", "Vuihoc có tốt không", "Vuihoc hướng dẫn sử dụng"]
+
+  - id: HOCMAI
+    platform_group: trong_nuoc
+    role: tinh_huong_lich_su
+    play_id: com.hocmai
+    ios_id: "1476075532"
+    trends_keyword: HOCMAI
+    news: {keywords: ['"HOCMAI"', '"Hocmai.vn"'], title_match: 'hocmai'}
+    youtube_queries: ["Hocmai review"]
+
+  - id: MONKEY
+    platform_group: trong_nuoc
+    role: tinh_huong_lich_su
+    play_id: com.earlystart.android.monkeyjunior
+    ios_id: "930331514"
+    trends_keyword: Monkey Junior
+    news: {keywords: ['"Monkey Junior"', '"Monkey Math"'], title_match: 'monkey (junior|math|stories)'}
+    youtube_queries: []                 # không thu YouTube: phần lớn video tắt bình luận (nội dung cho trẻ em)
+    notes: "Không có dữ liệu YouTube; ghi rõ là hạn chế trong báo cáo."
+
+  # ---------------- Quốc tế ----------------
+  - id: DUOLINGO
+    platform_group: quoc_te
+    role: moc_so_sanh                   # dữ liệu kho ứng dụng chỉ phủ khoảng 2 tháng; chỉ làm mốc tại một thời điểm
+    play_id: com.duolingo
+    ios_id: "570060128"
+    trends_keyword: Duolingo
+    news: {keywords: ['"Duolingo"'], title_match: 'duolingo'}
+    youtube_queries: ["Duolingo review"]
+    youtube_exclude_video_ids: [eFQYtg69K2o, Ajt8-Q-NE20]   # video giải trí/meme, không phải đánh giá sản phẩm
+
+  - id: Khan Academy
+    platform_group: quoc_te
+    role: bo_sung_quoc_te
+    play_id: org.khanacademy.android
+    ios_id: "469863705"
+    trends_keyword: Khan Academy
+    news: {keywords: ['"Khan Academy"'], title_match: 'khan academy'}
+    youtube_queries: ["Khan Academy review", "Khan Academy có tốt không", "Khan Academy hướng dẫn sử dụng"]
+
+  - id: Quizlet
+    platform_group: quoc_te
+    role: du_bao_chinh                  # 24/36 tháng gần nhất đạt từ 30 đánh giá tiếng Việt (đề cương v3); hạ về bo_sung_quoc_te nếu sau ETL tụt dưới ngưỡng
+    play_id: com.quizlet.quizletandroid
+    ios_id: "546473125"
+    trends_keyword: Quizlet
+    news: {keywords: ['"Quizlet"'], title_match: 'quizlet'}
+    youtube_queries: ["Quizlet review"]
+
+  - id: Memrise
+    platform_group: quoc_te
+    role: bo_sung_quoc_te
+    play_id: com.memrise.android.memrisecompanion
+    ios_id: "635966718"
+    trends_keyword: Memrise
+    news: {keywords: ['"Memrise"'], title_match: 'memrise'}
+    youtube_queries: ["Memrise review", "Memrise có tốt không", "Memrise hướng dẫn sử dụng"]
+
+  - id: Busuu
+    platform_group: quoc_te
+    role: bo_sung_quoc_te
+    play_id: com.busuu.android.enc
+    ios_id: "379968583"
+    trends_keyword: Busuu
+    news: {keywords: ['"Busuu"'], title_match: 'busuu'}
+    youtube_queries: ["Busuu review", "Busuu có tốt không", "Busuu hướng dẫn sử dụng"]
+
+# Ứng viên đã thăm dò nhưng KHÔNG đưa vào (dưới 100 đánh giá tiếng Việt trong mẫu), ghi lại để khỏi thử lại:
+rejected:
+  - {id: Coursera, play_id: org.coursera.android, ios_id: "736535961", reason: "ít đánh giá tiếng Việt (mẫu: 50 Play, 22 iOS)"}
+  - {id: Udemy, play_id: com.udemy.android, ios_id: "562413829", reason: "ít đánh giá tiếng Việt (mẫu: 59 Play, 7 iOS)"}
+  - {id: Babbel, play_id: com.babbel.mobile.android.en, ios_id: "829587759", reason: "ít đánh giá tiếng Việt (mẫu: 21 Play, 5 iOS)"}
+  - {id: Cake, play_id: me.mycake, ios_id: "1350420987", reason: "đạt ngưỡng ở Google Play (mẫu 535/1000) nhưng để dự phòng, chưa thu thập đủ"}
