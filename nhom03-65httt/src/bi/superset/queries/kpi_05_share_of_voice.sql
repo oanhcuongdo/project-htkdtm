@@ -7,8 +7,9 @@ WITH count_per_platform AS (
     FROM dw.fact_review fr
     JOIN dw.dim_time dt ON dt.time_key = fr.time_key
     JOIN dw.dim_platform dp ON dp.platform_key = fr.platform_key
-    WHERE dt.full_date >= COALESCE(CAST('{{ from_dttm }}' AS date), DATE '1900-01-01')
-      AND dt.full_date < COALESCE(CAST('{{ to_dttm }}' AS date) + 1, DATE '2100-01-01')
+    WHERE TRUE
+      {% if from_dttm %} AND dt.full_date >= '{{ from_dttm }}'::date {% endif %}
+      {% if to_dttm %} AND dt.full_date < '{{ to_dttm }}'::date {% endif %}
     GROUP BY dt.full_date, dp.platform_name
 )
 SELECT full_date, platform_name, so_danh_gia,
