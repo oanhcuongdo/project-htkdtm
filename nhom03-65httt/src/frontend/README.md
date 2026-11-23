@@ -171,4 +171,19 @@ npm run preview
 > **Quy ước:**
 > 1. Khi thêm trang nội dung mới, hãy tạo tệp `index.tsx` trong thư mục `src/pages/<tên-trang>/` và khai báo route tương ứng tại `src/routes.tsx`.
 > 2. **KHÔNG** sửa đổi các tệp cấu hình nền tảng (`vite.config.ts`, `tsconfig*.json`, `components.json`), thư mục `src/components/ui/`, thư mục `src/auth/` hoặc `src/components/layout/` nếu không thật sự cần thiết.
-> 3. Tùng sẽ bổ sung tệp `src/services/mock-data.ts` khi ghép dữ liệu mẫu cho các trang.
+> 3. Dữ liệu mẫu của các trang nằm ở `src/services/mock-data.ts` (số liệu **minh họa**, không phải dữ liệu thật). Khi có API FastAPI, thay dần bằng các hàm trong `src/services/api.ts`.
+> 4. Thành phần dùng chung của các trang nội dung (tiêu đề, khung thẻ, bộ lọc, thẻ KPI) nằm ở `src/components/shared/common.tsx`; dùng màu theo biến theme (`bg-card`, `text-foreground`, ...) để chế độ sáng/tối hoạt động.
+
+### Trạng thái các trang nội dung
+
+| Trang | Đường dẫn | Ghi chú |
+|---|---|---|
+| Tổng quan | `/tong-quan` | KPI, diễn biến cảm xúc, nguồn dữ liệu, xếp hạng BHI, khuyến nghị |
+| So sánh nền tảng | `/so-sanh` | 9 nền tảng, lọc trong nước/quốc tế, radar |
+| Phân tích khía cạnh | `/khia-canh` | 4 khía cạnh (Kỹ thuật, Học thuật, CSKH, Giá) |
+| Xu hướng & dự báo | `/xu-huong` | Theo tháng, dự báo 1–3 tháng, mô hình nền, khoảng tin cậy, sự kiện, MAE |
+| Trợ lý AI | `/tro-ly` | Trò chuyện mẫu (chưa nối LLM) |
+| Review Explorer | `/review-explorer` | Lọc, phân trang, cờ lệch pha |
+| Cảnh báo & khuyến nghị | `/canh-bao` | Lọc theo mức, đánh dấu xử lý |
+| Quản trị | `/quan-tri` | Chỉ Admin: người dùng, nguồn dữ liệu & ETL, nhật ký |
+| Dashboard Superset | `/dashboard` | Khung iframe, cấu hình bằng `VITE_SUPERSET_DASHBOARD_URL` |

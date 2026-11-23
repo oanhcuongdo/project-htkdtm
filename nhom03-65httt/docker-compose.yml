@@ -1,0 +1,73 @@
+# EduVision BI - Nhóm 03 (65HTTT): chạy cục bộ bằng Docker Compose.
+#
+# Cách dùng (từ thư mục nhom03-65httt/):
+#   1. cp .env.example .env     rồi điền POSTGRES_PASSWORD (không commit .env)
+#   2. docker compose up -d --build
+#   3. API:  http://localhost:8000/docs      Kiểm tra: http://localhost:8000/health/db
+#
+# Thứ tự khởi động: postgres (healthy) -> migrate (Alembic, chạy xong rồi thoát) -> api.
+# Hiện có: PostgreSQL, Alembic và API FastAPI.
+# Chưa có (bổ sung ở PR riêng): Superset, n8n, website (chạy riêng bằng `npm run dev` trong src/frontend).
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: eduvision-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-eduvision}
+      POSTGRES_USER: ${POSTGRES_USER:-eduvision}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Hãy đặt POSTGRES_PASSWORD trong tệp .env (xem .env.example)}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  # Chạy migration Alembic (src/database/migrations) rồi thoát. Chạy lại an toàn: bản đã áp dụng được bỏ qua.
+  migrate:
+    build:
+      context: ./src/database
+    image: eduvision-migrate:dev
+    container_name: eduvision-migrate
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-eduvision}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-eduvision}
+
+  api:
+    build:
+      context: ./src/backend
+    image: eduvision-api:dev
+    container_name: eduvision-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-eduvision}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-eduvision}
+      PLATFORMS_FILE: /app/config/platforms.yml
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173}
+      APP_ENV: ${APP_ENV:-dev}
+    ports:
+      - "127.0.0.1:${API_PORT:-8000}:8000"
+    volumes:
+      - ./config:/app/config:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  pgdata:

@@ -32,3 +32,6 @@ lerna-debug.log*
 # Temporary files
 *.tsbuildinfo
 .DS_Store
+
+# .gitignore gốc của lớp chặn mọi thư mục tên "lib/"; thư mục này chứa utils.ts (hàm cn của shadcn) nên PHẢI được commit
+!src/lib/

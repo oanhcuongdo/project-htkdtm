@@ -1,9 +1,9 @@
 # Cấu hình nền tảng E-learning của EduVision BI.
 # Mục tiêu: THÊM MỘT NỀN TẢNG = THÊM MỘT KHỐI trong file này (không sửa mã).
 #
-# Lưu ý trạng thái: các script thu thập hiện tại (collect_reviews.py, collect_youtube.py, collect_news.py,
-# collect_context.py) vẫn khai báo nền tảng trong mã. Khi chuyển collector vào src/etl/collectors/, cần cho chúng
-# ĐỌC file này; việc đó chưa làm.
+# Lưu ý trạng thái: collector Google Play (src/etl/collectors/google_play_collector.py) và API (/api/v1/platforms) đã ĐỌC
+# file này. Các script thu thập khác (YouTube, báo chí, bối cảnh) vẫn khai báo nền tảng trong mã; khi chuyển vào
+# src/etl/collectors/ cần cho chúng đọc file này.
 #
 # Mã ứng dụng (play_id, ios_id) đã được kiểm chứng bằng tên + nhà phát hành khớp, không đoán.
 # Cách thêm nền tảng mới: (1) tìm play_id, ios_id và kiểm tra nhà phát hành, (2) điền khối mới theo mẫu dưới đây,
