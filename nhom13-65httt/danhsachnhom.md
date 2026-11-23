@@ -6,13 +6,13 @@
 
 ## Thành viên và nhiệm vụ
 
-| STT | Thành viên | Vai trò | Nhiệm vụ chính | Sản phẩm phụ trách |
-| :-: | :--- | :--- | :--- | :--- |
-| 1 | Thiều Quang Gia Bảo | Nhóm trưởng | Điều phối công việc và quản lý nhánh GitHub của nhóm; thiết kế kiến trúc tổng thể, mô hình dữ liệu Star Schema trên PostgreSQL và môi trường Docker Compose; tích hợp các thành phần, tổng hợp báo cáo cuối kỳ. | Sơ đồ kiến trúc và ERD, cấu hình PostgreSQL/FastAPI/Superset, mã nguồn đã tích hợp và báo cáo tổng kết. |
-| 2 | Trần Minh Giang | Thành viên | Xây dựng luồng thu thập giao dịch từ email thông báo biến động số dư và tệp sao kê CSV/PDF; viết bộ phân tích dữ liệu đầu vào và thiết lập lịch chạy pipeline. | Module đọc email và sao kê, dữ liệu giao dịch được trích xuất, cấu hình chạy tự động. |
-| 3 | Nguyễn Thu Giang | Thành viên | Xây dựng luồng nhận ảnh biên lai qua Telegram Bot và OCR; chuẩn hóa ngày giờ, số tiền, nội dung giao dịch; xử lý giao dịch trùng lặp trước khi nạp vào PostgreSQL. | Module OCR và làm sạch dữ liệu, quy tắc khử trùng lặp cùng nhật ký xử lý, dữ liệu sạch trong kho dữ liệu. |
-| 4 | Trương Quốc Thái | Thành viên | Xây dựng các chức năng AI: phân loại danh mục giao dịch từ mô tả tiếng Việt, phát hiện giao dịch bất thường và dự báo dòng tiền; cung cấp kết quả qua API để tích hợp. | Module AI và API, kết quả phân loại/dự báo/cảnh báo, báo cáo đánh giá độ chính xác và sai số mô hình. |
-| 5 | Nguyễn Thị Khanh | Thành viên | Kết nối PostgreSQL với Apache Superset; định nghĩa các chỉ số và bộ dữ liệu phân tích; xây dựng dashboard tổng quan dòng tiền, hành vi chi tiêu, dự báo và cảnh báo; chuẩn bị nội dung trình bày và demo. | Ba dashboard Superset, cấu hình cảnh báo/báo cáo, slide và kịch bản demo. |
+| STT | Họ và Tên | Mã Sinh Viên | Lớp Sinh Hoạt | Vai Trò | Nhiệm Vụ Phân Công | Tỷ Lệ Đóng Góp (%) | Email |
+| :-: | :--- | :-: | :-: | :--- | :--- | :-: | :--- |
+| 1 | [Thiều Quang Gia Bảo] | [2351160507] | [65HTTT] | Nhóm trưởng | Điều phối công việc và quản lý nhánh GitHub của nhóm; thiết kế kiến trúc tổng thể, mô hình dữ liệu Star Schema trên PostgreSQL và môi trường Docker Compose; tích hợp các thành phần, tổng hợp báo cáo cuối kỳ. | 100% | giabao2005.vn@gmail.com |
+| 2 | [Nguyễn Thị Khanh] | [2351160531] | [65HTTT] | Thành viên | Kết nối PostgreSQL với Apache Superset; định nghĩa các chỉ số và bộ dữ liệu phân tích; xây dựng dashboard tổng quan dòng tiền, hành vi chi tiêu, dự báo và cảnh báo; chuẩn bị nội dung trình bày và demo. | 100% | ntkhanh.201105@gmail.com |
+| 3 | [Nguyễn Thu Giang] | [2351160514] | [65HTTT] | Thành viên | Xây dựng luồng nhận ảnh biên lai qua Telegram Bot và OCR; chuẩn hóa ngày giờ, số tiền, nội dung giao dịch; xử lý giao dịch trùng lặp trước khi nạp vào PostgreSQL. | 100% | 2351160514@e.tlu.edu.vn |
+| 4 | [Trần Minh Giang] | [2351160515] | [65HTTT] | Thành viên | Xây dựng luồng thu thập giao dịch từ email thông báo biến động số dư và tệp sao kê CSV/PDF; viết bộ phân tích dữ liệu đầu vào và thiết lập lịch chạy pipeline. | 100% | pes2002giangkoii@gmail.com |
+| 5 | [Trương Quốc Thái] | [2151163723] | [63HTTT2] | Thành viên | Xây dựng các chức năng AI: phân loại danh mục giao dịch từ mô tả tiếng Việt, phát hiện giao dịch bất thường và dự báo dòng tiền; cung cấp kết quả qua API để tích hợp. | 100% | truongquocthai.tlu@gmail.com |
 
 ## Phối hợp và nghiệm thu
 

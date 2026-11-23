@@ -13,11 +13,9 @@
 
 | STT | Họ và Tên | Mã Sinh Viên | Lớp Sinh Hoạt | Vai Trò | Nhiệm Vụ Phân Công | Tỷ Lệ Đóng Góp (%) | Email |
 | :-: | :--- | :-: | :-: | :--- | :--- | :-: | :--- |
-| 1 | [Thiều Quang Gia Bảo] | [2351160507] | [65HTTT] | Nhóm trưởng | Thiết kế kiến trúc, phát triển Backend API | 100% | giabao2005.vn@gmail.com |
-| 2 | [Nguyễn Thị Khanh] | [2351160531] | [65HTTT] | Thành viên | Thiết kế giao diện Frontend, tích hợp API | 100% | ntkhanh.201105@gmail.com |
-| 3 | [Nguyễn Thu Giang] | [2351160514] | [65HTTT] | Thành viên | Thiết kế cơ sở dữ liệu, kiểm thử phần mềm | 100% | 2351160514@e.tlu.edu.vn |
-| 4 | [Trần Minh Giang] | [2351160515] | [65HTTT] | Thành viên | Thiết kế giao diện Frontend, tích hợp API | 100% | pes2002giangkoii@gmail.com |
-| 5 | [Trương Quốc Thái] | [2151163723] | [63HTTT2] | Thành viên | Thiết kế giao diện Frontend, tích hợp API | 100% | truongquocthai.tlu@gmail.com |
+| 1 | [Nguyễn Văn A] | [20210001] | [DHTI15A1HN] | Nhóm trưởng | Thiết kế kiến trúc, phát triển Backend API | 100% | a@student.edu.vn |
+| 2 | [Trần Thị B] | [20210002] | [DHTI15A1HN] | Thành viên | Thiết kế giao diện Frontend, tích hợp API | 100% | b@student.edu.vn |
+| 3 | [Lê Văn C] | [20210003] | [DHTI15A1HN] | Thành viên | Thiết kế cơ sở dữ liệu, kiểm thử phần mềm | 100% | c@student.edu.vn |
 
 ---
 
