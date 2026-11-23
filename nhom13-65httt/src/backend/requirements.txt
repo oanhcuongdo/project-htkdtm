@@ -1,0 +1,17 @@
+# Core Web Framework
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+pydantic>=2.6.0
+python-dotenv>=1.0.0
+
+# Database & SQL
+psycopg2-binary>=2.9.9
+SQLAlchemy>=2.0.25
+
+# Data Processing & Analysis
+pandas>=2.2.0
+numpy>=1.26.0
+
+# Scheduling & Utilities
+apscheduler>=3.10.4
+requests>=2.31.0

@@ -1,0 +1,102 @@
+services:
+  # ==========================================================
+  # 1. Cơ sở dữ liệu & Kho dữ liệu Star Schema (PostgreSQL 16)
+  # ==========================================================
+  postgres_db:
+    image: postgres:16-alpine
+    container_name: htkdtm_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-personal_finance_dw}
+      POSTGRES_USER: ${POSTGRES_USER:-finance_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-SecurePassword123!}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./src/database/init_database.sql:/docker-entrypoint-initdb.d/init_database.sql:ro
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-finance_user} -d ${POSTGRES_DB:-personal_finance_dw}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - htkdtm_network
+
+  # ==========================================================
+  # 2. Redis Cache & Task Broker
+  # ==========================================================
+  redis:
+    image: redis:7-alpine
+    container_name: htkdtm_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - htkdtm_network
+
+  # ==========================================================
+  # 3. Backend Service: Ingestion, ETL, AI & RESTful API (FastAPI)
+  # ==========================================================
+  backend:
+    build:
+      context: ./src/backend
+      dockerfile: Dockerfile
+    container_name: htkdtm_backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - ./src/backend:/app
+      - ./docs:/app/docs:ro
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - htkdtm_network
+
+  # ==========================================================
+  # 4. Nền tảng Trực quan hóa Doanh nghiệp (Apache Superset)
+  # ==========================================================
+  superset:
+    build:
+      context: ./src/frontend/superset
+      dockerfile: Dockerfile
+    container_name: htkdtm_superset
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "${SUPERSET_PORT:-8088}:8088"
+    environment:
+      SUPERSET_SECRET_KEY: ${SUPERSET_SECRET_KEY:-SecureSupersetSecretKey2026FinanceApp123!}
+      SUPERSET_PORT: 8088
+    volumes:
+      - ./src/frontend/superset/superset_config.py:/app/pythonpath/superset_config.py
+      - superset_home:/app/superset_home
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - htkdtm_network
+
+volumes:
+  postgres_data:
+    name: htkdtm_postgres_data
+  redis_data:
+    name: htkdtm_redis_data
+  superset_home:
+    name: htkdtm_superset_home
+
+networks:
+  htkdtm_network:
+    name: htkdtm_network
+    driver: bridge
