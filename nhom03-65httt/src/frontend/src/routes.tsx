@@ -29,28 +29,19 @@ const withSuspense = (Component: React.LazyExoticComponent<React.ComponentType<a
   </Suspense>
 )
 
-// Component giữ chỗ chung cho các trang Tùng sẽ phát triển sau
-const PlaceholderPage = ({ title }: { title: string }) => (
-  <div className="space-y-4">
-    <div>
-      <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
-      <p className="text-sm text-muted-foreground mt-0.5">
-        Trang đang xây dựng (Tùng sẽ thêm nội dung theo thiết kế v0).
-      </p>
-    </div>
-    <div className="rounded-xl border border-dashed border-border/80 p-8 text-center bg-card/50">
-      <p className="text-sm text-muted-foreground">
-        Nội dung trang này sẽ được Tùng hoàn thiện trong nhánh phát triển giao diện <code>nhom03-65httt-tung-ui</code>.
-      </p>
-    </div>
-  </div>
-)
-
 // Các trang đã hoàn thiện
 const LoginPage = lazy(() => import("@/pages/login"))
 const KhongCoQuyenPage = lazy(() => import("@/pages/khong-co-quyen"))
 const NotFoundPage = lazy(() => import("@/pages/not-found"))
 const DashboardPage = lazy(() => import("@/pages/dashboard"))
+const TongQuanPage = lazy(() => import("@/pages/tong-quan"))
+const SoSanhPage = lazy(() => import("@/pages/so-sanh"))
+const KhiaCanhPage = lazy(() => import("@/pages/khia-canh"))
+const XuHuongPage = lazy(() => import("@/pages/xu-huong"))
+const TroLyPage = lazy(() => import("@/pages/tro-ly"))
+const ReviewExplorerPage = lazy(() => import("@/pages/review-explorer"))
+const CanhBaoPage = lazy(() => import("@/pages/canh-bao"))
+const QuanTriPage = lazy(() => import("@/pages/quan-tri"))
 
 export const router = createBrowserRouter([
   // Route đăng nhập công khai
@@ -79,19 +70,19 @@ export const router = createBrowserRouter([
           },
           {
             path: "/tong-quan",
-            element: <PlaceholderPage title="Tổng quan nền tảng" />,
+            element: withSuspense(TongQuanPage),
           },
           {
             path: "/so-sanh",
-            element: <PlaceholderPage title="So sánh nền tảng" />,
+            element: withSuspense(SoSanhPage),
           },
           {
             path: "/khia-canh",
-            element: <PlaceholderPage title="Phân tích khía cạnh (ABSA)" />,
+            element: withSuspense(KhiaCanhPage),
           },
           {
             path: "/xu-huong",
-            element: <PlaceholderPage title="Xu hướng & dự báo" />,
+            element: withSuspense(XuHuongPage),
           },
           {
             path: "/dashboard",
@@ -99,15 +90,15 @@ export const router = createBrowserRouter([
           },
           {
             path: "/tro-ly",
-            element: <PlaceholderPage title="Trợ lý AI" />,
+            element: withSuspense(TroLyPage),
           },
           {
             path: "/review-explorer",
-            element: <PlaceholderPage title="Review Explorer" />,
+            element: withSuspense(ReviewExplorerPage),
           },
           {
             path: "/canh-bao",
-            element: <PlaceholderPage title="Cảnh báo & khuyến nghị" />,
+            element: withSuspense(CanhBaoPage),
           },
 
           // Route Quản trị: chỉ Quản trị viên (Admin) được phép vào
@@ -116,7 +107,7 @@ export const router = createBrowserRouter([
             children: [
               {
                 path: "/quan-tri",
-                element: <PlaceholderPage title="Quản trị hệ thống" />,
+                element: withSuspense(QuanTriPage),
               },
             ],
           },

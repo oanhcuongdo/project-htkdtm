@@ -31,7 +31,7 @@
 nhom03-65httt/
 ├── danhsachnhom.md          # Tệp thông tin nhóm này
 ├── README.md                # Cấu trúc, quy tắc repo công khai, cách chạy
-├── docker-compose.yml       # PostgreSQL, Superset, n8n (chưa cấu hình)
+├── docker-compose.yml       # PostgreSQL, migration Alembic, API FastAPI (Superset, n8n bổ sung sau)
 ├── .env.example             # Mẫu biến môi trường (khóa API chỉ để trong .env, không commit)
 ├── config/
 │   └── platforms.yml        # Danh sách nền tảng: thêm nền tảng = thêm một khối cấu hình
@@ -41,7 +41,7 @@ nhom03-65httt/
 │   ├── De_Cuong_Nhom03.docx
 │   └── dao_duc_phap_ly.md   # Điều khoản Google Play, App Store, YouTube; quyền riêng tư
 └── src/
-    ├── database/            # schema (galaxy), migration, seed
+    ├── database/            # schema (galaxy) bằng SQL, migration Alembic, seed
     ├── etl/                 # collectors, transform, load, quality, workflows (n8n)
     ├── ml/                  # labeling, sentiment (M1), absa (M2), forecast (M3), anomaly, notebooks
     ├── backend/             # API FastAPI (api, core, llm, ml, models, schemas, services, tests)
@@ -53,7 +53,7 @@ nhom03-65httt/
 
 ## 4. Hướng Dẫn Cài Đặt Và Thực Thi Mã Nguồn
 
-> **Trạng thái:** mã nguồn chưa được viết; các thư mục trong `src/` mới là khung. Phần này ghi quy trình dự kiến và sẽ được cập nhật khi có mã, không ghi lệnh chưa chạy thử.
+> **Trạng thái:** đã có collector Google Play, schema kho dữ liệu (galaxy) kèm migration Alembic, khung API FastAPI, khung website (các trang đang dùng dữ liệu minh họa) và Docker Compose (PostgreSQL, migrate, API). **Chưa có:** các collector còn lại, ETL, mô hình AI, chatbot, Superset, n8n. Phần này chỉ ghi các lệnh đã chạy thử và sẽ cập nhật khi có thêm mã.
 
 ### 4.1. Môi trường yêu cầu
 - Hệ điều hành: Windows 10/11 (máy các thành viên); Linux dùng được qua Docker.
@@ -62,7 +62,7 @@ nhom03-65httt/
 - Mô hình PhoBERT: huấn luyện trên Google Colab hoặc Kaggle (cần GPU); trọng số tải riêng, xem `models/README.md`.
 
 ### 4.2. Các bước cài đặt và khởi chạy
-1. Sao chép `.env.example` thành `.env` và điền tham số (khóa YouTube API, khóa LLM, mật khẩu cơ sở dữ liệu). Không commit `.env`.
+1. Sao chép `.env.example` thành `.env` và điền tham số (hiện bắt buộc có `POSTGRES_PASSWORD`; khóa YouTube API và khóa LLM dùng ở các phần sau). Không commit `.env`.
 2. Đặt dữ liệu vào `data/raw/` và `data/clean/` theo `data/README.md` (nhận từ kênh riêng của nhóm, không lấy từ Git); tải trọng số mô hình vào `models/` theo `models/README.md`.
-3. Cài các gói phụ thuộc: Python trong `src/backend/requirements.txt` (hiện còn trống), Node.js trong `src/frontend/`.
-4. Khởi chạy hạ tầng bằng `docker compose up -d` (PostgreSQL, Superset, n8n), sau đó chạy ETL, API FastAPI và website.
+3. Cài các gói phụ thuộc: API chạy trong Docker (`src/backend/requirements.txt`, `requirements-dev.txt` cho kiểm thử); website cần Node.js (`npm install` trong `src/frontend/`).
+4. Khởi chạy hạ tầng bằng `docker compose up -d --build` (PostgreSQL, migration Alembic, API FastAPI), rồi chạy website bằng `npm run dev` trong `src/frontend/`. Superset, n8n và ETL sẽ bổ sung.

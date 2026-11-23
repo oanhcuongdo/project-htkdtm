@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+seed/
+*.md
+.env
+.env.*
