@@ -2,11 +2,13 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
-# Cài đặt thư viện hệ thống cần thiết cho psycopg2 và xử lý dữ liệu
+# Cài đặt thư viện hệ thống cho psycopg2, PDF và Tesseract OCR tiếng Việt
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
     curl \
+    tesseract-ocr \
+    tesseract-ocr-vie \
     && rm -rf /var/lib/apt/lists/*
 
 # Cài đặt Python dependencies

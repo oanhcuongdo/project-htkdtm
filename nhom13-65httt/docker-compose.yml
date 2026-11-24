@@ -53,6 +53,7 @@ services:
     volumes:
       - ./src/backend:/app
       - ./docs:/app/docs:ro
+      - ./csv:/app/watch_statements
     depends_on:
       postgres_db:
         condition: service_healthy

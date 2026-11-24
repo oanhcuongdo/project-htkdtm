@@ -1,0 +1,7 @@
+# Bỏ qua thư mục chứa dữ liệu sao kê ngân hàng cá nhân nhạy cảm
+csv/
+
+# Bỏ qua cache kiểm thử và thư mục mount Docker tạm
+.pytest_cache/
+src/backend/docs/
+src/backend/watch_statements/

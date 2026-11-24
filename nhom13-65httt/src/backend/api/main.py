@@ -1,11 +1,25 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from api.config import settings
+from api.dependencies import check_db_connection
+from api.routers import ingestion_routes
+from scheduler.cron_jobs import start_scheduler, stop_scheduler
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    start_scheduler()
+    yield
+    stop_scheduler()
+
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
-    description="Backend API phục vụ Hệ thống Quản lý Tài chính Cá nhân Thông minh (Nhóm 13 - 65HTTT)"
+    description="Backend API phục vụ Hệ thống Quản lý Tài chính Cá nhân Thông minh (Nhóm 13 - 65HTTT)",
+    lifespan=lifespan,
 )
 
 # Cấu hình CORS cho phép truy cập từ các ứng dụng frontend/dashboard
@@ -17,6 +31,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Gắn các router nghiệp vụ
+app.include_router(ingestion_routes.router)
+
+
 @app.get("/")
 def read_root():
     return {
@@ -25,30 +43,36 @@ def read_root():
         "class": "65HTTT - Hệ thống Kinh doanh Thông minh",
         "status": "online",
         "environment": settings.ENVIRONMENT,
-        "docs_url": "/docs"
+        "docs_url": "/docs",
     }
+
 
 @app.get("/health")
 def healthcheck():
-    """Kiểm tra tình trạng hoạt động của backend service."""
+    """Kiểm tra tình trạng hoạt động của backend service và kết nối PostgreSQL."""
+    db_ok = check_db_connection()
     return {
-        "status": "healthy",
-        "database_configured": bool(settings.POSTGRES_HOST),
-        "database_target": f"{settings.POSTGRES_HOST}:{settings.POSTGRES_PORT}/{settings.POSTGRES_DB}"
+        "status": "healthy" if db_ok else "degraded",
+        "database_connected": db_ok,
+        "database_target": f"{settings.POSTGRES_HOST}:{settings.POSTGRES_PORT}/{settings.POSTGRES_DB}",
     }
+
 
 @app.get("/api/v1/system-status")
 def system_status():
     """Trả về trạng thái các module trong hệ thống."""
     return {
         "modules": {
-            "ingestion_email": "ready",
-            "ingestion_statement": "ready",
-            "ingestion_telegram_ocr": "ready",
+            "ingestion_email": "active",
+            "ingestion_statement": "active",
+            "ingestion_telegram_ocr": "active",
+            "etl_deduplication": "active",
+            "data_quality_gate": "active",
+            "scheduler": "running",
             "data_warehouse": "initialized",
-            "ai_classifier": "ready",
-            "ai_anomaly_detector": "ready",
-            "ai_forecaster": "ready",
-            "superset_bi": "ready"
+            "ai_classifier": "pending_phase_3",
+            "ai_anomaly_detector": "pending_phase_3",
+            "ai_forecaster": "pending_phase_3",
+            "superset_bi": "active",
         }
     }
