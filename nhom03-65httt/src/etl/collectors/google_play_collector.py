@@ -157,7 +157,11 @@ def normalize_review(review: dict[str, Any], product_id: str, crawled_at: str) -
     text = review.get("content") or ""
     # Tên hiển thị chỉ được đọc tạm thời để tạo mã băm; không được ghi vào CSV.
     display_name = str(review.get("userName") or "")
-    author_hash = hashlib.sha256(display_name.encode("utf-8")).hexdigest()[:12]
+    author_hash = (
+        hashlib.sha256(display_name.encode("utf-8")).hexdigest()[:12]
+        if display_name
+        else ""
+    )
     diacritic_count = sum(character in VIETNAMESE_DIACRITICS for character in text)
 
     return {
