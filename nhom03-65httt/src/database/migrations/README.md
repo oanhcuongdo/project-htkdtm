@@ -7,6 +7,7 @@ Mỗi migration Alembic chỉ **chạy một tệp SQL tương ứng**, nhờ đ
 |---|---|---|
 | `0001` | `schema/01_schema_core.sql` | schema `raw`, `clean`, `dw`; dim_time, dim_platform, dim_source, fact_review |
 | `0002` | `schema/02_schema_dims_facts.sql` | các dim và fact còn lại (đủ 6 fact, 7 dim) |
+| `0003` | `schema/03_schema_news.sql` | `clean.news_article`: bài báo gốc (tiêu đề, tên báo, đường dẫn, ngày đăng; không toàn văn). Migration kế tiếp dùng `0004` |
 
 ## Chạy
 
