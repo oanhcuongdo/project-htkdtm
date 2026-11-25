@@ -15,8 +15,11 @@ class Settings:
     
     # Cấu hình AI Gemini
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
-    
-    # Cấu hình Scraper
+    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
+    GEMINI_EMBEDDING_MODEL: str = os.getenv("GEMINI_EMBEDDING_MODEL", "gemini-embedding-001")
+
+    # Cấu hình Scheduler & Scraper
+    SCHEDULER_INTERVAL_HOURS: int = int(os.getenv("SCHEDULER_INTERVAL_HOURS", "12"))
     SCRAPER_REQUEST_TIMEOUT: int = int(os.getenv("SCRAPER_REQUEST_TIMEOUT", "15"))
     SCRAPER_DELAY_SECONDS: float = float(os.getenv("SCRAPER_DELAY_SECONDS", "1.5"))
     DEFAULT_USER_AGENT: str = (

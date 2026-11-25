@@ -7,18 +7,18 @@ ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from src.backend.database.supabase_client import test_connection, get_supabase_client
+from src.backend.database.supabase_client import get_supabase_client, test_connection
+from src.backend.etl.pipeline import ETLPipeline
 from src.backend.scraper.chotot_scraper import ChototScraper
 from src.backend.scraper.phongtro123_scraper import Phongtro123Scraper
-from src.backend.etl.pipeline import ETLPipeline
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    handlers=[logging.StreamHandler(sys.stdout)]
+    handlers=[logging.StreamHandler(sys.stdout)],
 )
 logger = logging.getLogger("SmartRentCrawler")
-const str = ""
+
 
 def main():
     parser = argparse.ArgumentParser(description="Thu thập và Lưu trữ dữ liệu Nhà Thuê Thông Minh lên Supabase")
@@ -27,6 +27,10 @@ def main():
     parser.add_argument("--offset", type=int, default=0, help="Vị trí offset bắt đầu cho Chợ Tốt")
     parser.add_argument("--page", type=int, default=1, help="Trang bắt đầu cho Phongtro123")
     parser.add_argument("--target", type=int, default=None, help="Mục tiêu tổng số tin cần đạt trong Fact table (vd: 250)")
+    parser.add_argument("--backfill", action="store_true", help="Làm giàu lại dữ liệu hiện có từ staging_raw_listings")
+    parser.add_argument("--check-active", type=int, default=0, help="Kiểm tra trạng thái còn/hết hạn của N tin đang active")
+    parser.add_argument("--skip-gemini", action="store_true", help="Chạy ETL bằng Regex fallback, bỏ qua gọi API Gemini")
+    parser.add_argument("--fast-pt123", action="store_true", help="Không truy cập trang chi tiết Phongtro123 (cào nhanh)")
     args = parser.parse_args()
 
     print("=" * 70)
@@ -39,14 +43,27 @@ def main():
         return
 
     client = get_supabase_client()
-    pipeline = ETLPipeline()
+    pipeline = ETLPipeline(use_gemini=not args.skip_gemini)
+
+    if args.backfill:
+        logger.info("Chạy Backfill làm giàu dữ liệu từ staging_raw_listings...")
+        stats = pipeline.backfill_from_staging()
+        print(f"Hoàn tất Backfill: {stats}")
+        return
+
+    if args.check_active > 0:
+        logger.info("Kiểm tra trạng thái hoạt động của %d tin...", args.check_active)
+        res = pipeline.refresh_listing_active_status(sample_limit=args.check_active)
+        print(f"Hoàn tất kiểm tra vòng đời tin: {res}")
+        return
+
     chotot = ChototScraper()
-    pt123 = Phongtro123Scraper()
+    pt123 = Phongtro123Scraper(fetch_details=not args.fast_pt123)
 
     if args.target:
         current_count = client.table("fact_rental_listings").select("fact_id", count="exact").execute().count
         logger.info(f"Mục tiêu cần đạt: {args.target} tin. Hiện có: {current_count} tin.")
-        
+
         if current_count >= args.target:
             print(f"\n[THÔNG BÁO] Kho dữ liệu đã đạt/vượt mục tiêu ({current_count}/{args.target} tin).")
             return
@@ -94,12 +111,10 @@ def main():
 
     all_listings = []
     if args.source in ["chotot", "all"]:
-        chotot_listings = chotot.fetch_listings(limit=args.limit, start_offset=args.offset)
-        all_listings.extend(chotot_listings)
+        all_listings.extend(chotot.fetch_listings(limit=args.limit, start_offset=args.offset))
 
     if args.source in ["phongtro123", "all"]:
-        pt123_listings = pt123.fetch_listings(limit=args.limit, start_page=args.page)
-        all_listings.extend(pt123_listings)
+        all_listings.extend(pt123.fetch_listings(limit=args.limit, start_page=args.page))
 
     if not all_listings:
         return
@@ -109,6 +124,7 @@ def main():
 
     fact_count = client.table("fact_rental_listings").select("fact_id", count="exact").execute().count
     print(f"Đã lưu Staging: {saved_staging} | Fact: {loaded_facts} (Tổng: {fact_count})")
+
 
 if __name__ == "__main__":
     main()

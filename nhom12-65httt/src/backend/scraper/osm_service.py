@@ -1,9 +1,12 @@
 import math
+import time
 from typing import Dict, Tuple, Optional, List
 import requests
 import logging
 
 logger = logging.getLogger(__name__)
+
+_GEOCODE_CACHE: Dict[str, Tuple[Optional[float], Optional[float]]] = {}
 
 # Danh mục tọa độ các trường Đại học trọng điểm tại Hà Nội (Đặc biệt là ĐH Thủy Lợi)
 HANOI_UNIVERSITIES = [
@@ -79,3 +82,43 @@ def query_osm_overpass_amenities(lat: float, lon: float, radius_meters: int = 10
     except Exception as e:
         logger.warning("Không thể truy vấn OSM Overpass API: %s", e)
     return {"amenities_count": 0}
+
+
+def geocode_address_nominatim(
+    street: Optional[str],
+    district: Optional[str],
+    ward: Optional[str] = None,
+) -> Tuple[Optional[float], Optional[float]]:
+    """
+    Geocoding địa chỉ tại Hà Nội bằng OpenStreetMap Nominatim API (có cache trong bộ nhớ).
+    Trả về (latitude, longitude) hoặc (None, None) nếu không tìm thấy.
+    """
+    parts = [p.strip() for p in [street or "", ward or "", district or "", "Hà Nội", "Vietnam"] if p and p.strip()]
+    if len(parts) < 3:
+        return None, None
+
+    query = ", ".join(parts)
+    if query in _GEOCODE_CACHE:
+        return _GEOCODE_CACHE[query]
+
+    url = "https://nominatim.openstreetmap.org/search"
+    headers = {"User-Agent": "Nhom12-65HTTT-SmartRental/1.0 (tlu-student-project)"}
+    params = {"q": query, "format": "json", "limit": 1, "countrycodes": "vn"}
+
+    try:
+        time.sleep(1.0)
+        res = requests.get(url, params=params, headers=headers, timeout=8)
+        if res.status_code == 200:
+            items = res.json()
+            if items:
+                lat = float(items[0]["lat"])
+                lon = float(items[0]["lon"])
+                # Kiểm tra tọa độ nằm trong phạm vi Hà Nội
+                if 20.5 <= lat <= 21.5 and 105.2 <= lon <= 106.2:
+                    _GEOCODE_CACHE[query] = (lat, lon)
+                    return lat, lon
+    except Exception as e:
+        logger.debug("Nominatim geocoding thất bại cho '%s': %s", query, e)
+
+    _GEOCODE_CACHE[query] = (None, None)
+    return None, None

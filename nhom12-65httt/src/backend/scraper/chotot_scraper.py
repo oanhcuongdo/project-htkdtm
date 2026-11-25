@@ -58,7 +58,10 @@ class ChototScraper(BaseScraper):
                         "description": ad.get("body", "").strip(),
                         "original_url": f"https://www.nhatot.com/phong-tro-nha-tro-ha-noi/{external_id}.htm",
                         "price": ad.get("price"),
+                        "original_price": ad.get("original_price"),
+                        "price_diff": ad.get("price_diff"),
                         "price_string": ad.get("price_string"),
+                        "deposit": ad.get("deposit"),
                         "area": ad.get("size"),
                         "latitude": ad.get("latitude"),
                         "longitude": ad.get("longitude"),
@@ -66,9 +69,19 @@ class ChototScraper(BaseScraper):
                         "ward": ad.get("ward_name"),
                         "street": ad.get("street_name"),
                         "images": ad.get("images", []),
+                        "videos": ad.get("videos", []),
+                        "furnishing_rent": ad.get("furnishing_rent"),
                         "poster_name": ad.get("account_name"),
                         "poster_id": str(ad.get("account_id") or ""),
                         "poster_type": "moi_gioi" if ad.get("company_ad") else "chinh_chu",
+                        "sold_ads_count": ad.get("sold_ads") or 0,
+                        "is_verified_seller": bool(ad.get("is_shop_verified")),
+                        "is_promoted": bool(
+                            ad.get("is_sticky")
+                            or ad.get("sticky_ad_platinum")
+                            or ad.get("special_display")
+                        ),
+                        "orig_published_at": ad.get("orig_list_time"),
                         "published_at": ad.get("list_time"),
                         "raw_payload": ad
                     }
@@ -85,3 +98,21 @@ class ChototScraper(BaseScraper):
 
         logger.info("Hoàn tất cào Chợ Tốt: Thu thập được %d tin.", len(results))
         return results
+
+    def is_listing_active(self, external_id: str) -> Optional[bool]:
+        """Kiểm tra tin đăng Chợ Tốt còn tồn tại hay đã ẩn/hết hạn."""
+        if not external_id:
+            return None
+        try:
+            resp = self.session.get(f"{self.API_URL}/{external_id}", timeout=self.timeout)
+            if resp.status_code in (404, 410):
+                return False
+            if resp.status_code == 200:
+                ad = resp.json().get("ad") or {}
+                status = str(ad.get("status", "")).lower()
+                if status in ("sold", "deleted", "expired", "inactive"):
+                    return False
+                return True
+        except Exception:
+            pass
+        return None

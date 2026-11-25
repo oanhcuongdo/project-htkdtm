@@ -103,6 +103,8 @@ CREATE TABLE IF NOT EXISTS public.dim_landlord (
     phone_masked VARCHAR(50),
     poster_type VARCHAR(50) DEFAULT 'unknown', -- 'chinh_chu', 'moi_gioi', 'unknown'
     total_listings INT DEFAULT 1,
+    sold_ads_count INT NOT NULL DEFAULT 0,
+    is_verified_seller BOOLEAN NOT NULL DEFAULT false,
     trust_score NUMERIC(4, 2) DEFAULT 5.0,
     created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
@@ -130,6 +132,7 @@ CREATE TABLE IF NOT EXISTS public.fact_rental_listings (
     
     -- Metrics
     price NUMERIC(14, 2) NOT NULL, -- Giá niêm yết (VNĐ/tháng)
+    original_price NUMERIC(14, 2), -- Giá gốc trước khi giảm (nếu có)
     area NUMERIC(8, 2), -- Diện tích (m²)
     price_per_m2 NUMERIC(14, 2), -- Đơn giá VNĐ/m²
     deposit_amount NUMERIC(14, 2) DEFAULT 0, -- Tiền cọc (VNĐ)
@@ -145,8 +148,20 @@ CREATE TABLE IF NOT EXISTS public.fact_rental_listings (
     -- AI Vector Embedding (768 chiều)
     embedding vector(768),
     
+    -- Thanh khoản, trạng thái & khử trùng lặp
     is_verified BOOLEAN DEFAULT false,
     is_active BOOLEAN DEFAULT true,
+    is_promoted BOOLEAN NOT NULL DEFAULT false,
+    videos JSONB NOT NULL DEFAULT '[]'::jsonb,
+    room_status VARCHAR(50) NOT NULL DEFAULT 'con_trong',
+    extraction_source VARCHAR(30) NOT NULL DEFAULT 'regex',
+    duplicate_group_id UUID,
+    is_duplicate BOOLEAN NOT NULL DEFAULT false,
+    view_count INT NOT NULL DEFAULT 0,
+    wishlist_count INT NOT NULL DEFAULT 0,
+    orig_published_at TIMESTAMPTZ,
+    last_bumped_at TIMESTAMPTZ,
+    closed_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
     
@@ -160,13 +175,63 @@ CREATE INDEX IF NOT EXISTS idx_fact_price ON public.fact_rental_listings (price)
 CREATE INDEX IF NOT EXISTS idx_fact_area ON public.fact_rental_listings (area);
 CREATE INDEX IF NOT EXISTS idx_fact_price_per_m2 ON public.fact_rental_listings (price_per_m2);
 CREATE INDEX IF NOT EXISTS idx_fact_is_active ON public.fact_rental_listings (is_active);
+CREATE INDEX IF NOT EXISTS idx_fact_is_duplicate ON public.fact_rental_listings (is_duplicate);
+CREATE INDEX IF NOT EXISTS idx_fact_is_promoted ON public.fact_rental_listings (is_promoted);
+CREATE INDEX IF NOT EXISTS idx_fact_orig_published_at ON public.fact_rental_listings (orig_published_at DESC);
 
 -- HNSW Vector Index
 CREATE INDEX IF NOT EXISTS idx_fact_embedding_hnsw 
 ON public.fact_rental_listings 
 USING hnsw (embedding vector_cosine_ops);
 
--- 5. PHÂN QUYỀN VÀ RLS (ROW LEVEL SECURITY)
+-- 5. CÁC BẢNG HÀNH VI NGƯỜI DÙNG, BÁO CÁO & PHÂN QUYỀN
+CREATE TABLE IF NOT EXISTS public.user_profiles (
+    user_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    email VARCHAR(255) UNIQUE,
+    full_name VARCHAR(255),
+    role VARCHAR(20) NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+);
+
+CREATE TABLE IF NOT EXISTS public.fact_user_interactions (
+    interaction_id BIGSERIAL PRIMARY KEY,
+    user_id UUID REFERENCES public.user_profiles(user_id) ON DELETE SET NULL,
+    session_id VARCHAR(100) NOT NULL,
+    fact_id UUID NOT NULL REFERENCES public.fact_rental_listings(fact_id) ON DELETE CASCADE,
+    action_type VARCHAR(30) NOT NULL CHECK (action_type IN ('view', 'wishlist', 'unwishlist', 'compare', 'contact_click')),
+    metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+);
+
+CREATE INDEX IF NOT EXISTS idx_interactions_fact_action ON public.fact_user_interactions (fact_id, action_type);
+CREATE INDEX IF NOT EXISTS idx_interactions_session_created ON public.fact_user_interactions (session_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS public.search_history (
+    search_id BIGSERIAL PRIMARY KEY,
+    user_id UUID REFERENCES public.user_profiles(user_id) ON DELETE SET NULL,
+    session_id VARCHAR(100) NOT NULL,
+    raw_query TEXT,
+    parsed_filters JSONB NOT NULL DEFAULT '{}'::jsonb,
+    results_count INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+);
+
+CREATE INDEX IF NOT EXISTS idx_search_history_session_created ON public.search_history (session_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS public.listing_reports (
+    report_id BIGSERIAL PRIMARY KEY,
+    fact_id UUID NOT NULL REFERENCES public.fact_rental_listings(fact_id) ON DELETE CASCADE,
+    reporter_session_id VARCHAR(100),
+    reason VARCHAR(100) NOT NULL,
+    description TEXT,
+    status VARCHAR(30) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'reviewed', 'resolved', 'dismissed')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+    reviewed_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_listing_reports_fact_status ON public.listing_reports (fact_id, status);
+
+-- 6. PHÂN QUYỀN VÀ RLS (ROW LEVEL SECURITY)
 ALTER TABLE public.staging_raw_listings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.dim_time ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.dim_location ENABLE ROW LEVEL SECURITY;
@@ -174,11 +239,16 @@ ALTER TABLE public.dim_property_type ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.dim_amenities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.dim_landlord ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.fact_rental_listings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.fact_user_interactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.search_history ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.listing_reports ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Allow public read-only access to staging" ON public.staging_raw_listings FOR SELECT USING (true);
 CREATE POLICY "Allow full access for service role on staging" ON public.staging_raw_listings FOR ALL USING (true) WITH CHECK (true);
 
 CREATE POLICY "Allow public read-only access to dim_time" ON public.dim_time FOR SELECT USING (true);
+CREATE POLICY "Allow full access for data loader on dim_time" ON public.dim_time FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow public read-only access to dim_location" ON public.dim_location FOR SELECT USING (true);
 CREATE POLICY "Allow public read-only access to dim_property_type" ON public.dim_property_type FOR SELECT USING (true);
 CREATE POLICY "Allow public read-only access to dim_amenities" ON public.dim_amenities FOR SELECT USING (true);
@@ -186,3 +256,116 @@ CREATE POLICY "Allow public read-only access to dim_landlord" ON public.dim_land
 
 CREATE POLICY "Allow public read-only access to fact_rental_listings" ON public.fact_rental_listings FOR SELECT USING (true);
 CREATE POLICY "Allow full access for service role on fact_rental_listings" ON public.fact_rental_listings FOR ALL USING (true) WITH CHECK (true);
+
+CREATE POLICY "Allow public access to user_profiles" ON public.user_profiles FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public access to fact_user_interactions" ON public.fact_user_interactions FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public access to search_history" ON public.search_history FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public access to listing_reports" ON public.listing_reports FOR ALL USING (true) WITH CHECK (true);
+
+-- 7. VIEW PHÂN TÍCH TỔNG HỢP (Superset & Backend API)
+CREATE OR REPLACE VIEW public.view_rental_market_analytics AS
+SELECT
+    f.fact_id,
+    f.source,
+    f.title,
+    f.original_url,
+    f.price,
+    f.area,
+    f.price_per_m2,
+    f.deposit_amount,
+    f.estimated_total_cost,
+    f.price_diff_rate,
+    f.price_segment,
+    f.risk_score,
+    f.completeness_score,
+    f.is_active,
+    f.created_at,
+    t.full_date,
+    t.month,
+    t.month_name,
+    t.quarter,
+    t.year,
+    t.is_peak_student_season,
+    l.province,
+    l.district,
+    l.ward,
+    l.street,
+    l.latitude,
+    l.longitude,
+    l.nearest_university,
+    l.distance_to_university_km,
+    pt.type_code,
+    pt.type_name,
+    a.has_air_conditioner,
+    a.has_water_heater,
+    a.has_washing_machine,
+    a.has_private_bathroom,
+    a.has_kitchen,
+    a.has_balcony,
+    a.has_elevator,
+    a.has_parking,
+    a.has_security,
+    a.has_flexible_hours,
+    ll.poster_name,
+    ll.poster_type,
+    ll.trust_score AS landlord_trust_score,
+    f.original_price,
+    f.electricity_cost,
+    f.water_cost,
+    f.service_cost,
+    f.is_promoted,
+    f.is_duplicate,
+    f.room_status,
+    f.extraction_source,
+    f.videos,
+    f.view_count,
+    f.wishlist_count,
+    f.orig_published_at,
+    f.last_bumped_at,
+    f.closed_at,
+    CASE
+        WHEN f.orig_published_at IS NOT NULL THEN
+            ROUND(EXTRACT(EPOCH FROM (COALESCE(f.closed_at, timezone('utc'::text, now())) - f.orig_published_at)) / 86400.0, 2)
+        ELSE NULL
+    END AS days_on_market,
+    ll.sold_ads_count,
+    ll.is_verified_seller
+FROM public.fact_rental_listings f
+LEFT JOIN public.dim_time t ON f.time_id = t.time_id
+LEFT JOIN public.dim_location l ON f.location_id = l.location_id
+LEFT JOIN public.dim_property_type pt ON f.property_type_id = pt.property_type_id
+LEFT JOIN public.dim_amenities a ON f.amenity_id = a.amenity_id
+LEFT JOIN public.dim_landlord ll ON f.landlord_id = ll.landlord_id;
+
+-- 8. HÀM RPC TÌM KIẾM VECTOR SIMILARITY (pgvector)
+CREATE OR REPLACE FUNCTION public.match_listings(
+    query_embedding vector(768),
+    match_threshold FLOAT DEFAULT 0.3,
+    match_count INT DEFAULT 20
+)
+RETURNS TABLE (
+    fact_id UUID,
+    title TEXT,
+    price NUMERIC,
+    area NUMERIC,
+    district VARCHAR,
+    similarity FLOAT
+)
+LANGUAGE sql STABLE
+AS $$
+    SELECT
+        f.fact_id,
+        f.title,
+        f.price,
+        f.area,
+        l.district,
+        1 - (f.embedding <=> query_embedding) AS similarity
+    FROM public.fact_rental_listings f
+    LEFT JOIN public.dim_location l ON f.location_id = l.location_id
+    WHERE f.is_active = true
+      AND f.is_duplicate = false
+      AND f.embedding IS NOT NULL
+      AND 1 - (f.embedding <=> query_embedding) > match_threshold
+    ORDER BY f.embedding <=> query_embedding
+    LIMIT match_count;
+$$;
