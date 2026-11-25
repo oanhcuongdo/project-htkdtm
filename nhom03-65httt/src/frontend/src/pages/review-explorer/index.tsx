@@ -3,13 +3,20 @@ import { AlertTriangle, ChevronLeft, ChevronRight, Search, Loader2, RefreshCw } 
 
 import { PageHeading, Panel, SelectControl, sentimentTone, toneClass } from "@/components/shared/common"
 import { fetchPlatforms, fetchReviews, type ReviewItem, type PlatformItem } from "@/services/api"
-import { aspects, sources } from "@/services/mock-data"
+import { aspects } from "@/services/mock-data"
 
 const PAGE_SIZE = 6
 const ALL_PLATFORMS = "Tất cả nền tảng"
 const ALL_SOURCES = "Tất cả nguồn"
 const ALL_SENTIMENTS = "Tất cả cảm xúc"
 const ALL_ASPECTS = "Tất cả khía cạnh"
+
+const SOURCE_OPTIONS = [
+  { label: ALL_SOURCES, value: ALL_SOURCES },
+  { label: "Google Play", value: "google_play" },
+  { label: "App Store", value: "app_store_vn" },
+  { label: "YouTube", value: "youtube" },
+]
 
 export default function ReviewExplorerPage() {
   const [query, setQuery] = useState("")
@@ -104,11 +111,7 @@ export default function ReviewExplorerPage() {
             <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold text-emerald-600">
               API máy chủ (Live)
             </span>
-          ) : (
-            <span className="rounded-full bg-amber-500/10 px-2.5 py-1 text-[10px] font-semibold text-amber-600">
-              Ngoại tuyến
-            </span>
-          )
+          ) : null
         }
       >
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
@@ -119,7 +122,7 @@ export default function ReviewExplorerPage() {
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Từ khóa hoặc mã review"
+                placeholder="Từ khóa trong nội dung..."
                 className="w-full rounded-lg border border-border bg-background py-2 pl-9 pr-3 text-xs text-foreground outline-none focus:border-indigo-400"
               />
             </div>
@@ -134,7 +137,7 @@ export default function ReviewExplorerPage() {
             label="Nguồn"
             value={source}
             onChange={setSource}
-            options={[ALL_SOURCES, ...sources.map((item) => item.name)]}
+            options={SOURCE_OPTIONS}
           />
           <SelectControl
             label="Cảm xúc"
@@ -221,13 +224,17 @@ export default function ReviewExplorerPage() {
                       </span>
                     </td>
                     <td className="py-4">
-                      <span
-                        className={`whitespace-nowrap rounded-full px-2 py-1 text-[10px] font-medium ${sentimentTone(
-                          row.sentiment || "Trung lập"
-                        )}`}
-                      >
-                        {row.sentiment || "Trung lập"}
-                      </span>
+                      {row.sentiment ? (
+                        <span
+                          className={`whitespace-nowrap rounded-full px-2 py-1 text-[10px] font-medium ${sentimentTone(
+                            row.sentiment
+                          )}`}
+                        >
+                          {row.sentiment}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
                     </td>
                     <td className="py-4">
                       <span className="whitespace-nowrap rounded-md border border-border px-2 py-1 text-[10px] text-foreground/80">

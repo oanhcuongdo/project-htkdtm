@@ -1,12 +1,12 @@
 /**
  * EduVision BI - Dịch vụ API kết nối Backend FastAPI (EduVision BI, Nhóm 03).
  *
- * HA2: Thay toàn bộ lớp mock services bằng API thật (FastAPI).
- * URL cấu hình từ biến Vite VITE_API_URL hoặc VITE_API_BASE_URL.
+ * HA2: Kết nối API thật (FastAPI) cho tìm kiếm, lọc và phân trang đánh giá.
+ * URL cấu hình duy nhất từ biến môi trường Vite VITE_API_BASE_URL.
  */
 
 export const API_BASE_URL =
-  import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1"
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1"
 
 /**
  * Lấy Bearer token từ localStorage nếu người dùng đã đăng nhập.
@@ -28,6 +28,7 @@ function getAuthHeaders(): Record<string, string> {
 
 /**
  * Hàm gọi API tổng quát, xử lý lỗi mạng và trả thông báo tiếng Việt thân thiện (HA2.3).
+ * Tự động chuyển hướng về trang /login và xóa session khi gặp lỗi 401 Unauthorized (B7).
  */
 async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`
@@ -39,10 +40,24 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
   let response: Response
   try {
     response = await fetch(url, { ...options, headers })
-  } catch (err) {
+  } catch {
     throw new Error(
       `Không thể kết nối đến máy chủ API (${API_BASE_URL}). Vui lòng kiểm tra lại dịch vụ backend.`
     )
+  }
+
+  // B7: Xử lý 401 Unauthorized
+  if (response.status === 401) {
+    try {
+      localStorage.removeItem("eduvision.token")
+      localStorage.removeItem("eduvision.session")
+    } catch {
+      // Bỏ qua lỗi truy cập storage
+    }
+    if (typeof window !== "undefined" && window.location.pathname !== "/login") {
+      window.location.href = "/login"
+    }
+    throw new Error("Phiên đăng nhập đã hết hạn hoặc không hợp lệ. Vui lòng đăng nhập lại.")
   }
 
   if (!response.ok) {
@@ -71,10 +86,6 @@ export interface PlatformItem {
   code: string
   category: "domestic" | "international"
   groupName: string // "Trong nước" hoặc "Quốc tế"
-  totalReviews: number
-  avgRating: number
-  bhiScore: number // Brand Health Index (0 - 100)
-  sentimentPositiveRatio: number
 }
 
 export interface ReviewItem {
@@ -85,7 +96,7 @@ export interface ReviewItem {
   rating: number | null
   created_at: string | null
   text: string | null
-  sentiment: string | null // "Tích cực", "Trung lập", "Tiêu cực"
+  sentiment: string | null // "Tích cực", "Trung lập", "Tiêu cực", hoặc null nếu chưa có nhãn
   sentiment_score: number | null
   aspect: string | null
   aspects: string[]
@@ -114,46 +125,12 @@ export interface ReviewFilterParams {
   page_size?: number
 }
 
-export interface AspectScore {
-  aspectId: string
-  aspectName: string
-  description: string
-  positiveRatio: number
-  neutralRatio: number
-  negativeRatio: number
-  score: number
-}
-
-export interface BhiOverview {
-  overallBhi: number
-  trendDelta: number
-  totalReviewsProcessed: number
-  lastUpdated: string
-  topPlatform: string
-}
-
-// Bảng số liệu chuẩn của 9 nền tảng phục vụ tính toán BHI và đánh giá
-const PLATFORM_STATS: Record<
-  string,
-  { name: string; totalReviews: number; avgRating: number; bhiScore: number; sentimentPositiveRatio: number }
-> = {
-  "elsa speak": { name: "ELSA Speak", totalReviews: 4200, avgRating: 4.6, bhiScore: 84.5, sentimentPositiveRatio: 0.82 },
-  "vuihoc": { name: "Vuihoc", totalReviews: 2800, avgRating: 4.4, bhiScore: 78.2, sentimentPositiveRatio: 0.76 },
-  "monkey junior": { name: "Monkey Junior", totalReviews: 1950, avgRating: 4.1, bhiScore: 71.0, sentimentPositiveRatio: 0.69 },
-  "hocmai": { name: "HOCMAI", totalReviews: 1600, avgRating: 4.0, bhiScore: 68.4, sentimentPositiveRatio: 0.65 },
-  "duolingo": { name: "Duolingo", totalReviews: 3600, avgRating: 4.7, bhiScore: 89.1, sentimentPositiveRatio: 0.88 },
-  "busuu": { name: "Busuu", totalReviews: 850, avgRating: 4.3, bhiScore: 75.8, sentimentPositiveRatio: 0.74 },
-  "khan academy": { name: "Khan Academy", totalReviews: 720, avgRating: 4.5, bhiScore: 82.0, sentimentPositiveRatio: 0.81 },
-  "memrise": { name: "Memrise", totalReviews: 640, avgRating: 4.2, bhiScore: 73.5, sentimentPositiveRatio: 0.70 },
-  "quizlet": { name: "Quizlet", totalReviews: 1250, avgRating: 4.6, bhiScore: 86.3, sentimentPositiveRatio: 0.85 },
-}
-
 // ============================================================================
 // Các hàm API thật (HA2)
 // ============================================================================
 
 /**
- * Lấy danh sách 9 nền tảng E-learning từ GET /api/v1/platforms
+ * Lấy danh sách 9 nền tảng E-learning từ GET /api/v1/platforms (từ tệp cấu hình chuẩn platforms.yml)
  */
 export async function fetchPlatforms(): Promise<PlatformItem[]> {
   interface RawPlatform {
@@ -165,25 +142,13 @@ export async function fetchPlatforms(): Promise<PlatformItem[]> {
 
   const raw = await fetchApi<RawPlatform[]>("/platforms")
   return raw.map((item, idx) => {
-    const key = item.id.toLowerCase()
-    const stats = PLATFORM_STATS[key] || {
-      name: item.id,
-      totalReviews: 1000 + idx * 250,
-      avgRating: 4.2,
-      bhiScore: 75.0,
-      sentimentPositiveRatio: 0.75,
-    }
     const isDomestic = item.group === "trong_nuoc"
     return {
       id: String(idx + 1),
-      name: stats.name,
+      name: item.id,
       code: item.id,
       category: isDomestic ? "domestic" : "international",
       groupName: isDomestic ? "Trong nước" : "Quốc tế",
-      totalReviews: stats.totalReviews,
-      avgRating: stats.avgRating,
-      bhiScore: stats.bhiScore,
-      sentimentPositiveRatio: stats.sentimentPositiveRatio,
     }
   })
 }
@@ -234,74 +199,8 @@ export async function fetchReviews(params: ReviewFilterParams = {}): Promise<Rev
 }
 
 /**
- * Lấy chi tiết một đánh giá theo khóa review_key
+ * Lấy chi tiết một đánh giá theo khóa review_key từ GET /api/v1/reviews/{review_key}
  */
 export async function fetchReviewByKey(reviewKey: number): Promise<ReviewItem> {
   return fetchApi<ReviewItem>(`/reviews/${reviewKey}`)
-}
-
-/**
- * Lấy số liệu tổng quan BHI dựa trên các nền tảng thật
- */
-export async function fetchBhiOverview(): Promise<BhiOverview> {
-  const platforms = await fetchPlatforms()
-  const totalReviews = platforms.reduce((acc, p) => acc + p.totalReviews, 0)
-  const avgBhi = platforms.length > 0
-    ? Number((platforms.reduce((acc, p) => acc + p.bhiScore, 0) / platforms.length).toFixed(1))
-    : 78.5
-
-  const sorted = [...platforms].sort((a, b) => b.bhiScore - a.bhiScore)
-  const topPlatform = sorted[0]?.name || "Duolingo"
-
-  return {
-    overallBhi: avgBhi,
-    trendDelta: +2.4,
-    totalReviewsProcessed: totalReviews,
-    lastUpdated: new Date().toISOString(),
-    topPlatform,
-  }
-}
-
-/**
- * Lấy phân tích điểm số theo 4 khía cạnh ABSA
- */
-export async function fetchAspectScores(): Promise<AspectScore[]> {
-  return [
-    {
-      aspectId: "academic",
-      aspectName: "Nội dung học thuật (Academic)",
-      description: "Chất lượng bài giảng, độ phong phú của lộ trình và bài tập",
-      positiveRatio: 0.82,
-      neutralRatio: 0.10,
-      negativeRatio: 0.08,
-      score: 8.4,
-    },
-    {
-      aspectId: "technical",
-      aspectName: "Tính năng kỹ thuật (Technical)",
-      description: "Độ mượt mà, nhận diện giọng nói, CDN video và độ ổn định",
-      positiveRatio: 0.76,
-      neutralRatio: 0.12,
-      negativeRatio: 0.12,
-      score: 7.8,
-    },
-    {
-      aspectId: "pricing",
-      aspectName: "Học phí & Giá trị (Pricing)",
-      description: "Mức giá so với chất lượng, chính sách gia hạn gói cước",
-      positiveRatio: 0.64,
-      neutralRatio: 0.16,
-      negativeRatio: 0.20,
-      score: 6.8,
-    },
-    {
-      aspectId: "customer_service",
-      aspectName: "Dịch vụ khách hàng (Customer Service)",
-      description: "Tốc độ phản hồi thắc mắc, hỗ trợ hoàn tiền và kỹ thuật",
-      positiveRatio: 0.70,
-      neutralRatio: 0.15,
-      negativeRatio: 0.15,
-      score: 7.2,
-    },
-  ]
 }
