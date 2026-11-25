@@ -27,3 +27,9 @@ ENV/
 # Hệ điều hành
 .DS_Store
 Thumbs.db
+
+# Frontend Node.js
+src/frontend/node_modules/
+src/frontend/dist/
+node_modules/
+dist/

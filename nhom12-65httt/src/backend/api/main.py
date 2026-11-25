@@ -1,37 +1,44 @@
-from fastapi import FastAPI, Query
-from typing import Optional, List
-from src.backend.database.supabase_client import get_supabase_client
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from src.backend.api.routers import auth, interactions, listings, reports, stubs
+from src.backend.config.settings import settings
 
 app = FastAPI(
     title="Smart Rental Housing API",
     description="Backend API cho Hệ thống tìm kiếm nhà thuê thông minh (Hà Nội) - Nhóm 12 (65HTTT)",
-    version="1.0.0"
+    version="1.1.0",
 )
+
+cors_origins = [origin.strip() for origin in settings.CORS_ORIGINS.split(",") if origin.strip()]
+if not cors_origins:
+    cors_origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(listings.router)
+app.include_router(interactions.router)
+app.include_router(reports.router)
+app.include_router(auth.router)
+app.include_router(stubs.router)
+
 
 @app.get("/")
 def read_root():
     return {
         "project": "Hệ Thống Tìm Kiếm Nhà Thuê Thông Minh",
         "group": "Nhóm 12 - 65HTTT",
-        "status": "online"
+        "status": "online",
+        "version": "1.1.0",
     }
 
-@app.get("/api/listings")
-def get_listings(
-    district: Optional[str] = Query(None, description="Lọc theo Quận/Huyện"),
-    min_price: Optional[float] = Query(None, description="Giá thuê tối thiểu"),
-    max_price: Optional[float] = Query(None, description="Giá thuê tối đa"),
-    limit: int = Query(20, ge=1, le=100)
-):
-    """Lấy danh sách phòng trọ từ view view_rental_market_analytics."""
-    client = get_supabase_client()
-    query = client.table("view_rental_market_analytics").select("*")
-    if district:
-        query = query.ilike("district", f"%{district}%")
-    if min_price is not None:
-        query = query.gte("price", min_price)
-    if max_price is not None:
-        query = query.lte("price", max_price)
-    
-    res = query.limit(limit).execute()
-    return {"total": len(res.data), "data": res.data}
+
+@app.get("/health")
+def health_check():
+    return {"status": "healthy"}

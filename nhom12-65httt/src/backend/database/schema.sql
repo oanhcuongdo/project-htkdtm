@@ -189,6 +189,7 @@ CREATE TABLE IF NOT EXISTS public.user_profiles (
     user_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email VARCHAR(255) UNIQUE,
     full_name VARCHAR(255),
+    password_hash TEXT,
     role VARCHAR(20) NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );

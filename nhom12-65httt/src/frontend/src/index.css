@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  --font-mono: "Fira Code", ui-monospace, monospace;
+  --color-primary: #0F766E;
+  --color-on-primary: #FFFFFF;
+  --color-secondary: #14B8A6;
+  --color-on-secondary: #0F172A;
+  --color-accent: #0369A1;
+  --color-on-accent: #FFFFFF;
+  --color-background: #F0FDFA;
+  --color-foreground: #134E4A;
+  --color-card: #FFFFFF;
+  --color-card-foreground: #134E4A;
+  --color-muted: #E8F0F3;
+  --color-muted-foreground: #475569;
+  --color-border: #CBD5E1;
+  --color-border-teal: #99F6E4;
+  --color-success: #15803D;
+  --color-warning: #D97706;
+  --color-destructive: #DC2626;
+  --color-ring: #0F766E;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.5;
+  }
+
+  button,
+  a,
+  [role="button"] {
+    cursor: pointer;
+  }
+
+  *:focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+}
+
+.tabular-nums-data {
+  font-variant-numeric: tabular-nums;
+}
+
+.glass-nav {
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

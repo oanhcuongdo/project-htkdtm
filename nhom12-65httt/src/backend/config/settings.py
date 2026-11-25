@@ -20,6 +20,8 @@ class Settings:
 
     # Cấu hình Scheduler & Scraper
     SCHEDULER_INTERVAL_HOURS: int = int(os.getenv("SCHEDULER_INTERVAL_HOURS", "12"))
+    AUTH_SECRET_KEY: str = os.getenv("AUTH_SECRET_KEY", "nhom12-65httt-smartrent-dev-secret")
+    CORS_ORIGINS: str = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173")
     SCRAPER_REQUEST_TIMEOUT: int = int(os.getenv("SCRAPER_REQUEST_TIMEOUT", "15"))
     SCRAPER_DELAY_SECONDS: float = float(os.getenv("SCRAPER_DELAY_SECONDS", "1.5"))
     DEFAULT_USER_AGENT: str = (
