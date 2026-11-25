@@ -1,0 +1,17 @@
+slice_name: Xu hướng nhu cầu tuyển dụng theo thời gian
+viz_type: echarts_timeseries_line
+params:
+  viz_type: echarts_timeseries_line
+  x_axis: posted_date
+  time_grain_sqla: P1M
+  metrics:
+  - sum_postings
+  groupby:
+  - industry_name
+  show_legend: true
+  rich_tooltip: true
+  markerEnabled: true
+  color_scheme: supersetColors
+uuid: 33333333-3333-3333-3333-333333333002
+version: 1.0.0
+dataset_uuid: 22222222-2222-2222-2222-222222223002

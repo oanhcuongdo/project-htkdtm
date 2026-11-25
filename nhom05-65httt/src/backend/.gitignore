@@ -1,0 +1,16 @@
+# Environment
+.env
+.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Database thử nghiệm
+db.sqlite3
+
+# User uploaded files
+media/
+
+# Collected static files
+staticfiles/

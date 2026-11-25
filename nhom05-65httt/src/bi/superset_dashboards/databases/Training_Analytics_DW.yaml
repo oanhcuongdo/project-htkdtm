@@ -1,0 +1,16 @@
+database_name: Training_Analytics_DW
+sqlalchemy_uri: postgresql+psycopg2://postgres:postgrespassword@postgres:5432/training_analytics
+cache_timeout: null
+expose_in_sqllab: true
+allow_run_async: false
+allow_ctas: false
+allow_cvas: false
+allow_dml: false
+allow_file_upload: false
+extra:
+  metadata_params: {}
+  engine_params: {}
+  metadata_cache_timeout: {}
+  schemas_allowed_for_file_upload: []
+uuid: 11111111-1111-1111-1111-111111111001
+version: 1.0.0

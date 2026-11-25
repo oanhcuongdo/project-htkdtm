@@ -1,0 +1,27 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% block title %}Trang chủ | Training Analytics{% endblock %}
+{% block content %}
+<section class="welcome-card">
+    <div>
+        <span class="eyebrow">TỔNG QUAN HỆ THỐNG</span>
+        <h2>Xin chào, {{ request.user.first_name|default:request.user.username }}</h2>
+        <p>Theo dõi hiệu quả đào tạo và đưa ra quyết định dựa trên dữ liệu.</p>
+    </div>
+    <i class="fa-solid fa-robot welcome-icon"></i>
+</section>
+<section class="metric-grid">
+    <article class="metric-card"><div class="metric-icon blue"><i class="fa-solid fa-users"></i></div><div><span>Tổng học viên</span><strong>1.248</strong><small class="positive">+8,2% tháng này</small></div></article>
+    <article class="metric-card"><div class="metric-icon green"><i class="fa-solid fa-award"></i></div><div><span>Tỷ lệ hoàn thành</span><strong>86,4%</strong><small class="positive">+3,1% kỳ này</small></div></article>
+    <article class="metric-card"><div class="metric-icon amber"><i class="fa-solid fa-triangle-exclamation"></i></div><div><span>Cần hỗ trợ</span><strong>74</strong><small>Học viên có nguy cơ</small></div></article>
+    <article class="metric-card"><div class="metric-icon violet"><i class="fa-solid fa-book-open"></i></div><div><span>Chương trình</span><strong>32</strong><small>Đang triển khai</small></div></article>
+</section>
+<section class="dashboard-grid">
+    <article class="panel"><div class="panel-header"><div><span class="eyebrow">DỮ LIỆU 6 THÁNG</span><h3>Xu hướng hoàn thành khóa học</h3></div><button class="filter-button">Học kỳ <i class="fa-solid fa-chevron-down"></i></button></div><canvas id="completionChart"></canvas></article>
+    <article class="panel"><div class="panel-header"><div><span class="eyebrow">THEO NHÓM NGÀNH</span><h3>Tỉ lệ hoàn thành</h3></div></div><canvas id="sectorChart"></canvas></article>
+</section>
+<section class="panel activity-panel"><div class="panel-header"><div><span class="eyebrow">DỮ LIỆU GẦN ĐÂY</span><h3>Hoạt động nổi bật</h3></div><a href="{% url 'learning' %}">Xem tất cả</a></div>
+<div class="activity-row"><span class="activity-icon blue"><i class="fa-solid fa-user-plus"></i></span><div><strong>125 học viên mới</strong><small>Đã đăng ký trong tuần qua</small></div><time>Hôm nay</time></div>
+<div class="activity-row"><span class="activity-icon amber"><i class="fa-solid fa-bell"></i></span><div><strong>18 học viên cần hỗ trợ</strong><small>Điểm tương tác giảm</small></div><time>2 giờ trước</time></div>
+</section>
+{% endblock %}
+{% block extra_js %}<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>{% endblock %}

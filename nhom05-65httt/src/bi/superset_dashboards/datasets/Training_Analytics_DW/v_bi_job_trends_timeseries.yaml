@@ -1,0 +1,24 @@
+table_name: v_bi_job_trends_timeseries
+main_dttm_col: posted_date
+description: Xu hướng nhu cầu tuyển dụng theo thời gian
+schema: dw
+filter_select_enabled: true
+uuid: 22222222-2222-2222-2222-222222223002
+metrics:
+- metric_name: sum_postings
+  verbose_name: Số tin tuyển dụng
+  expression: SUM(job_postings_count)
+columns:
+- column_name: posted_date
+  type: DATE
+  is_dttm: true
+- column_name: year_month
+  type: VARCHAR
+- column_name: industry_name
+  type: VARCHAR
+- column_name: location_name
+  type: VARCHAR
+- column_name: job_postings_count
+  type: BIGINT
+version: 1.0.0
+database_uuid: 11111111-1111-1111-1111-111111111001

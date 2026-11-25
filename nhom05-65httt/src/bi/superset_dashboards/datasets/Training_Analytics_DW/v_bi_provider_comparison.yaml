@@ -1,0 +1,30 @@
+table_name: v_bi_provider_comparison
+main_dttm_col: null
+description: So sánh chất lượng giữa các nhà cung cấp / giảng viên và khóa học
+schema: dw
+filter_select_enabled: true
+uuid: 22222222-2222-2222-2222-222222222002
+metrics:
+- metric_name: avg_rating_metric
+  verbose_name: Điểm đánh giá TB
+  expression: AVG(avg_rating)
+- metric_name: sum_reviews
+  verbose_name: Tổng phản hồi
+  expression: SUM(total_reviews)
+columns:
+- column_name: provider_name
+  type: VARCHAR
+- column_name: category
+  type: VARCHAR
+- column_name: course_title
+  type: VARCHAR
+- column_name: total_reviews
+  type: BIGINT
+- column_name: avg_rating
+  type: NUMERIC
+- column_name: positive_pct
+  type: NUMERIC
+- column_name: negative_pct
+  type: NUMERIC
+version: 1.0.0
+database_uuid: 11111111-1111-1111-1111-111111111001

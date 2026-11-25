@@ -1,0 +1,17 @@
+slice_name: Tỷ lệ học viên không hoàn thành (%)
+viz_type: big_number_total
+params:
+  viz_type: big_number_total
+  metric:
+    expressionType: SIMPLE
+    column:
+      column_name: non_completion_rate_pct
+    aggregate: MAX
+    label: Tỷ lệ không hoàn thành (%)
+  header_font_size: 0.4
+  subheader_font_size: 0.15
+  y_axis_format: '.2f'
+  subheader: '% Fail & Withdrawn'
+uuid: 33333333-3333-3333-3333-333333331003
+version: 1.0.0
+dataset_uuid: 22222222-2222-2222-2222-222222221001

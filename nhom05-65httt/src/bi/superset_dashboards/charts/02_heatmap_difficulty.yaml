@@ -1,0 +1,15 @@
+slice_name: Heatmap chủ đề học viên thường làm sai / gặp khó khăn
+viz_type: heatmap
+params:
+  viz_type: heatmap
+  all_columns_x: sub_dimension
+  all_columns_y: topic_module
+  metric: avg_failure_rate
+  linear_color_scheme: blue_white_yellow
+  xscale_interval: 1
+  yscale_interval: 1
+  show_values: true
+  normalized: false
+uuid: 33333333-3333-3333-3333-333333332003
+version: 1.0.0
+dataset_uuid: 22222222-2222-2222-2222-222222222003

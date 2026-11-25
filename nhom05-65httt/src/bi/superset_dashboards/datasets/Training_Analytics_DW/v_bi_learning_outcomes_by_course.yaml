@@ -1,0 +1,28 @@
+table_name: v_bi_learning_outcomes_by_course
+main_dttm_col: null
+description: Thống kê kết quả học tập theo học phần, học kỳ và nhân khẩu học
+schema: dw
+filter_select_enabled: true
+uuid: 22222222-2222-2222-2222-222222221004
+metrics:
+- metric_name: total_students
+  verbose_name: Tổng học viên
+  expression: SUM(student_count)
+- metric_name: mean_score
+  verbose_name: Điểm TB
+  expression: AVG(avg_score)
+columns:
+- column_name: code_module
+  type: VARCHAR
+- column_name: semester_label
+  type: VARCHAR
+- column_name: final_result
+  type: VARCHAR
+- column_name: risk_level
+  type: VARCHAR
+- column_name: student_count
+  type: BIGINT
+- column_name: avg_score
+  type: NUMERIC
+version: 1.0.0
+database_uuid: 11111111-1111-1111-1111-111111111001

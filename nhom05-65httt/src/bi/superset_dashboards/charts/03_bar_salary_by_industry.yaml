@@ -1,0 +1,13 @@
+slice_name: Mức lương trung bình theo ngành nghề (Triệu VNĐ)
+viz_type: echarts_timeseries_bar
+params:
+  viz_type: echarts_timeseries_bar
+  x_axis: industry_name
+  metrics:
+  - mean_salary_mid
+  show_legend: true
+  y_axis_format: '.1f'
+  color_scheme: supersetColors
+uuid: 33333333-3333-3333-3333-333333333004
+version: 1.0.0
+dataset_uuid: 22222222-2222-2222-2222-222222223001

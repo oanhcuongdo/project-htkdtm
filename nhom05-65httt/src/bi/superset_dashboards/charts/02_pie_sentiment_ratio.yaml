@@ -1,0 +1,16 @@
+slice_name: Tỷ lệ phản hồi tích cực, trung tính và tiêu cực
+viz_type: pie
+params:
+  viz_type: pie
+  groupby:
+  - sentiment
+  metric: total_mentions
+  show_labels: true
+  show_legend: true
+  label_type: key_percent
+  donut: true
+  innerRadius: 45
+  color_scheme: supersetColors
+uuid: 33333333-3333-3333-3333-333333332002
+version: 1.0.0
+dataset_uuid: 22222222-2222-2222-2222-222222222004

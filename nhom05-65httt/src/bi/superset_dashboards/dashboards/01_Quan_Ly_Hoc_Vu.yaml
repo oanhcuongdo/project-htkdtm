@@ -1,0 +1,95 @@
+dashboard_title: 'Dashboard 1: Quản lý học vụ'
+description: Theo dõi tổng số học viên, tỷ lệ hoàn thành/rời bỏ (Funnel), thống kê kết quả và danh sách cảnh báo sớm học viên có nguy cơ cao.
+css: ''
+slug: quan-ly-hoc-vu
+uuid: 44444444-4444-4444-4444-444444441001
+position:
+  DASHBOARD_VERSION_KEY: v2
+  ROOT_ID:
+    type: ROOT
+    id: ROOT_ID
+    children:
+    - GRID_ID
+  GRID_ID:
+    type: GRID
+    id: GRID_ID
+    children:
+    - ROW-KPI
+    - ROW-CHARTS
+    - ROW-TABLE
+  ROW-KPI:
+    type: ROW
+    id: ROW-KPI
+    children:
+    - CHART-KPI-1
+    - CHART-KPI-2
+    - CHART-KPI-3
+  ROW-CHARTS:
+    type: ROW
+    id: ROW-CHARTS
+    children:
+    - CHART-FUNNEL
+    - CHART-OUTCOMES
+  ROW-TABLE:
+    type: ROW
+    id: ROW-TABLE
+    children:
+    - CHART-RISK-TABLE
+  CHART-KPI-1:
+    type: CHART
+    id: CHART-KPI-1
+    meta:
+      chartId: 101
+      uuid: 33333333-3333-3333-3333-333333331001
+      sliceName: Tổng số học viên
+      width: 4
+      height: 25
+  CHART-KPI-2:
+    type: CHART
+    id: CHART-KPI-2
+    meta:
+      chartId: 102
+      uuid: 33333333-3333-3333-3333-333333331002
+      sliceName: Tỷ lệ hoàn thành khóa học (%)
+      width: 4
+      height: 25
+  CHART-KPI-3:
+    type: CHART
+    id: CHART-KPI-3
+    meta:
+      chartId: 103
+      uuid: 33333333-3333-3333-3333-333333331003
+      sliceName: Tỷ lệ học viên không hoàn thành (%)
+      width: 4
+      height: 25
+  CHART-FUNNEL:
+    type: CHART
+    id: CHART-FUNNEL
+    meta:
+      chartId: 104
+      uuid: 33333333-3333-3333-3333-333333331004
+      sliceName: Funnel tỷ lệ học viên duy trì và rời bỏ qua từng giai đoạn
+      width: 6
+      height: 50
+  CHART-OUTCOMES:
+    type: CHART
+    id: CHART-OUTCOMES
+    meta:
+      chartId: 106
+      uuid: 33333333-3333-3333-3333-333333331006
+      sliceName: Thống kê kết quả học tập theo học phần
+      width: 6
+      height: 50
+  CHART-RISK-TABLE:
+    type: CHART
+    id: CHART-RISK-TABLE
+    meta:
+      chartId: 105
+      uuid: 33333333-3333-3333-3333-333333331005
+      sliceName: Danh sách học viên có nguy cơ không hoàn thành khóa học
+      width: 12
+      height: 60
+metadata:
+  color_scheme: supersetColors
+  refresh_frequency: 0
+version: 1.0.0

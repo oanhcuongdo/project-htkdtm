@@ -1,0 +1,24 @@
+slice_name: Danh sách học viên có nguy cơ không hoàn thành khóa học
+viz_type: table
+params:
+  viz_type: table
+  query_mode: raw
+  all_columns:
+  - id_student
+  - code_module
+  - semester_label
+  - total_clicks
+  - active_days
+  - avg_score
+  - final_result
+  - risk_level
+  row_limit: 500
+  order_by_cols:
+  - '["avg_score", true]'
+  table_timestamp_format: smart_date
+  page_length: 20
+  include_search: true
+  show_cell_bars: true
+uuid: 33333333-3333-3333-3333-333333331005
+version: 1.0.0
+dataset_uuid: 22222222-2222-2222-2222-222222221003

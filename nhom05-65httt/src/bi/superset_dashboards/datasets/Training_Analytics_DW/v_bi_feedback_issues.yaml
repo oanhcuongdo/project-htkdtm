@@ -1,0 +1,23 @@
+table_name: v_bi_feedback_issues
+main_dttm_col: null
+description: Tổng hợp các vấn đề thường xuất hiện trong phản hồi học viên
+schema: dw
+filter_select_enabled: true
+uuid: 22222222-2222-2222-2222-222222222004
+metrics:
+- metric_name: total_mentions
+  verbose_name: Số lượt đề cập
+  expression: SUM(mention_count)
+columns:
+- column_name: issue_topic
+  type: VARCHAR
+- column_name: sentiment
+  type: VARCHAR
+- column_name: category
+  type: VARCHAR
+- column_name: provider_name
+  type: VARCHAR
+- column_name: mention_count
+  type: BIGINT
+version: 1.0.0
+database_uuid: 11111111-1111-1111-1111-111111111001

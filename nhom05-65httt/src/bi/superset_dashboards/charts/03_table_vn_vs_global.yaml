@@ -1,0 +1,19 @@
+slice_name: So sánh nhu cầu kỹ năng Việt Nam (VietJobs) và Quốc tế (WEF)
+viz_type: table
+params:
+  viz_type: table
+  query_mode: raw
+  all_columns:
+  - global_trend_item
+  - wef_category
+  - global_growth_rate_pct
+  - global_demand_level
+  - vietnam_relevance
+  - vn_related_job_mentions
+  - vn_related_avg_salary_mil
+  row_limit: 100
+  include_search: true
+  show_cell_bars: true
+uuid: 33333333-3333-3333-3333-333333333005
+version: 1.0.0
+dataset_uuid: 22222222-2222-2222-2222-222222223004

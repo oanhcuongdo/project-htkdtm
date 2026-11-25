@@ -1,0 +1,60 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: htkdtm_dw_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-training_analytics}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgrespassword}
+    ports:
+      - "5432:5432"
+    volumes:
+      - dw_pgdata:/var/lib/postgresql/data
+      - ../database/schema_postgresql.sql:/docker-entrypoint-initdb.d/01_schema.sql
+      - ../database/seed_data_postgresql.sql:/docker-entrypoint-initdb.d/02_seed.sql
+      - ../database/dw_star_schema.sql:/docker-entrypoint-initdb.d/03_dw_star_schema.sql
+      - ../database/dw_etl_from_staging.sql:/docker-entrypoint-initdb.d/04_dw_etl.sql
+      - ../database/dw_views_academic.sql:/docker-entrypoint-initdb.d/05_views_academic.sql
+      - ../database/dw_views_quality.sql:/docker-entrypoint-initdb.d/06_views_quality.sql
+      - ../database/dw_views_careers.sql:/docker-entrypoint-initdb.d/07_views_careers.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-training_analytics}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: htkdtm_bi_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  superset:
+    image: apache/superset:4.0.2
+    container_name: htkdtm_bi_superset
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      SUPERSET_SECRET_KEY: ${SUPERSET_SECRET_KEY:-htkdtm-nhom05-superset-secret-key}
+      SUPERSET_CONFIG_PATH: /app/pythonpath/superset_config.py
+      SUPERSET_ADMIN_USER: ${SUPERSET_ADMIN_USER:-admin}
+      SUPERSET_ADMIN_PASSWORD: ${SUPERSET_ADMIN_PASSWORD:-admin}
+      SUPERSET_ADMIN_EMAIL: ${SUPERSET_ADMIN_EMAIL:-2351160512@e.tlu.edu.vn}
+    ports:
+      - "8088:8088"
+    volumes:
+      - superset_home:/app/superset_home
+      - ./superset_config.py:/app/pythonpath/superset_config.py
+      - ./init_superset.sh:/app/init_superset.sh
+      - ./superset_dashboards:/app/bi_assets
+    command: ["/bin/bash", "/app/init_superset.sh"]
+
+volumes:
+  dw_pgdata:
+  superset_home:

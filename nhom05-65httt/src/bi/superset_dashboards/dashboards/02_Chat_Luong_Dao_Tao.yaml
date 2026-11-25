@@ -1,0 +1,85 @@
+dashboard_title: 'Dashboard 2: Chất lượng đào tạo'
+description: Đánh giá điểm rating trung bình, tỷ lệ cảm xúc phản hồi, heatmap chủ đề học viên thường làm sai, so sánh nhà cung cấp/giảng viên và các vấn đề nổi bật.
+css: ''
+slug: chat-luong-dao-tao
+uuid: 44444444-4444-4444-4444-444444442001
+position:
+  DASHBOARD_VERSION_KEY: v2
+  ROOT_ID:
+    type: ROOT
+    id: ROOT_ID
+    children:
+    - GRID_ID
+  GRID_ID:
+    type: GRID
+    id: GRID_ID
+    children:
+    - ROW-TOP
+    - ROW-MID
+    - ROW-BOT
+  ROW-TOP:
+    type: ROW
+    id: ROW-TOP
+    children:
+    - CHART-RATING
+    - CHART-SENTIMENT
+  ROW-MID:
+    type: ROW
+    id: ROW-MID
+    children:
+    - CHART-HEATMAP
+    - CHART-PROVIDER
+  ROW-BOT:
+    type: ROW
+    id: ROW-BOT
+    children:
+    - CHART-ISSUES
+  CHART-RATING:
+    type: CHART
+    id: CHART-RATING
+    meta:
+      chartId: 201
+      uuid: 33333333-3333-3333-3333-333333332001
+      sliceName: Điểm đánh giá trung bình khóa học
+      width: 4
+      height: 35
+  CHART-SENTIMENT:
+    type: CHART
+    id: CHART-SENTIMENT
+    meta:
+      chartId: 202
+      uuid: 33333333-3333-3333-3333-333333332002
+      sliceName: Tỷ lệ phản hồi tích cực, trung tính và tiêu cực
+      width: 8
+      height: 35
+  CHART-HEATMAP:
+    type: CHART
+    id: CHART-HEATMAP
+    meta:
+      chartId: 203
+      uuid: 33333333-3333-3333-3333-333333332003
+      sliceName: Heatmap chủ đề học viên thường làm sai / gặp khó khăn
+      width: 6
+      height: 50
+  CHART-PROVIDER:
+    type: CHART
+    id: CHART-PROVIDER
+    meta:
+      chartId: 204
+      uuid: 33333333-3333-3333-3333-333333332004
+      sliceName: So sánh chất lượng giữa các nhà cung cấp / giảng viên
+      width: 6
+      height: 50
+  CHART-ISSUES:
+    type: CHART
+    id: CHART-ISSUES
+    meta:
+      chartId: 205
+      uuid: 33333333-3333-3333-3333-333333332005
+      sliceName: Các vấn đề thường xuất hiện trong phản hồi học viên
+      width: 12
+      height: 50
+metadata:
+  color_scheme: supersetColors
+  refresh_frequency: 0
+version: 1.0.0

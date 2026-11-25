@@ -1,0 +1,16 @@
+slice_name: Top kỹ năng được doanh nghiệp yêu cầu
+viz_type: echarts_timeseries_bar
+params:
+  viz_type: echarts_timeseries_bar
+  x_axis: skill_name
+  metrics:
+  - sum_skill_jobs
+  groupby:
+  - skill_category
+  orientation: horizontal
+  row_limit: 20
+  show_legend: true
+  color_scheme: supersetColors
+uuid: 33333333-3333-3333-3333-333333333003
+version: 1.0.0
+dataset_uuid: 22222222-2222-2222-2222-222222223003

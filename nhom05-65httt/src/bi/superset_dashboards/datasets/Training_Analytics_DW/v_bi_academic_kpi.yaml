@@ -1,0 +1,32 @@
+table_name: v_bi_academic_kpi
+main_dttm_col: null
+description: KPI tổng quan quản lý học vụ (tổng học viên, tỷ lệ hoàn thành, tỷ lệ không hoàn thành)
+default_endpoint: null
+offset: 0
+cache_timeout: null
+schema: dw
+sql: null
+params: null
+template_params: null
+filter_select_enabled: true
+fetch_values_predicate: null
+extra: null
+uuid: 22222222-2222-2222-2222-222222221001
+metrics:
+- metric_name: count
+  verbose_name: COUNT(*)
+  metric_type: count
+  expression: COUNT(*)
+columns:
+- column_name: total_unique_students
+  type: BIGINT
+- column_name: completion_rate_pct
+  type: NUMERIC
+- column_name: non_completion_rate_pct
+  type: NUMERIC
+- column_name: high_risk_students
+  type: BIGINT
+- column_name: overall_avg_score
+  type: NUMERIC
+version: 1.0.0
+database_uuid: 11111111-1111-1111-1111-111111111001

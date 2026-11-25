@@ -1,0 +1,85 @@
+dashboard_title: 'Dashboard 3: Xu hướng ngành nghề'
+description: Phân tích top ngành nghề tuyển dụng, xu hướng theo thời gian, top kỹ năng yêu cầu, mức lương theo ngành và đối chiếu nhu cầu Việt Nam với xu hướng quốc tế WEF.
+css: ''
+slug: xu-huong-nganh-nghe
+uuid: 44444444-4444-4444-4444-444444443001
+position:
+  DASHBOARD_VERSION_KEY: v2
+  ROOT_ID:
+    type: ROOT
+    id: ROOT_ID
+    children:
+    - GRID_ID
+  GRID_ID:
+    type: GRID
+    id: GRID_ID
+    children:
+    - ROW-1
+    - ROW-2
+    - ROW-3
+  ROW-1:
+    type: ROW
+    id: ROW-1
+    children:
+    - CHART-INDUSTRY
+    - CHART-TIMESERIES
+  ROW-2:
+    type: ROW
+    id: ROW-2
+    children:
+    - CHART-SKILLS
+    - CHART-SALARY
+  ROW-3:
+    type: ROW
+    id: ROW-3
+    children:
+    - CHART-VN-GLOBAL
+  CHART-INDUSTRY:
+    type: CHART
+    id: CHART-INDUSTRY
+    meta:
+      chartId: 301
+      uuid: 33333333-3333-3333-3333-333333333001
+      sliceName: Top ngành nghề có nhu cầu tuyển dụng cao
+      width: 6
+      height: 45
+  CHART-TIMESERIES:
+    type: CHART
+    id: CHART-TIMESERIES
+    meta:
+      chartId: 302
+      uuid: 33333333-3333-3333-3333-333333333002
+      sliceName: Xu hướng nhu cầu tuyển dụng theo thời gian
+      width: 6
+      height: 45
+  CHART-SKILLS:
+    type: CHART
+    id: CHART-SKILLS
+    meta:
+      chartId: 303
+      uuid: 33333333-3333-3333-3333-333333333003
+      sliceName: Top kỹ năng được doanh nghiệp yêu cầu
+      width: 6
+      height: 50
+  CHART-SALARY:
+    type: CHART
+    id: CHART-SALARY
+    meta:
+      chartId: 304
+      uuid: 33333333-3333-3333-3333-333333333004
+      sliceName: Mức lương trung bình theo ngành nghề (Triệu VNĐ)
+      width: 6
+      height: 50
+  CHART-VN-GLOBAL:
+    type: CHART
+    id: CHART-VN-GLOBAL
+    meta:
+      chartId: 305
+      uuid: 33333333-3333-3333-3333-333333333005
+      sliceName: So sánh nhu cầu kỹ năng Việt Nam (VietJobs) và Quốc tế (WEF)
+      width: 12
+      height: 55
+metadata:
+  color_scheme: supersetColors
+  refresh_frequency: 0
+version: 1.0.0

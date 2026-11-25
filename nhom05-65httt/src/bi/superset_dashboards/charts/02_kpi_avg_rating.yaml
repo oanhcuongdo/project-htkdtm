@@ -1,0 +1,17 @@
+slice_name: Điểm đánh giá trung bình khóa học
+viz_type: big_number_total
+params:
+  viz_type: big_number_total
+  metric:
+    expressionType: SIMPLE
+    column:
+      column_name: avg_course_rating
+    aggregate: MAX
+    label: Điểm đánh giá TB
+  header_font_size: 0.4
+  subheader_font_size: 0.15
+  y_axis_format: '.2f'
+  subheader: Thang điểm 5.0 (Course Reviews)
+uuid: 33333333-3333-3333-3333-333333332001
+version: 1.0.0
+dataset_uuid: 22222222-2222-2222-2222-222222222001
