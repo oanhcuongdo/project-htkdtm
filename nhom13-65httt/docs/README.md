@@ -16,6 +16,7 @@ Kho tài liệu này chứa toàn bộ các đặc tả kỹ thuật, kiến tr�
 | **05** | [05_ke_hoach_trien_khai.md](file:///d:/HTKDTM/project-htkdtm/nhom13-65httt/docs/05_ke_hoach_trien_khai.md) | - Lộ trình 8 tuần chia theo 5 giai đoạn chi tiết.<br>- Phân công nhiệm vụ chi tiết cho 5 thành viên trong nhóm.<br>- Ma trận phân trách nhiệm RACI.<br>- Kế hoạch quản lý rủi ro và phương án ứng phó. |
 | **06** | [06_huong_dan_chuan_bi_va_van_hanh.md](file:///d:/HTKDTM/project-htkdtm/nhom13-65httt/docs/06_huong_dan_chuan_bi_va_van_hanh.md) | - Hướng dẫn thiết lập môi trường Docker Compose.<br>- Khởi tạo database và nạp dữ liệu mẫu mock data.<br>- Cấu hình Apache Superset và import 3 Dashboards.<br>- Kịch bản kiểm thử tích hợp (End-to-End). |
 | **07** | [07_bao_cao_danh_gia_mo_hinh_ai.md](file:///d:/HTKDTM/project-htkdtm/nhom13-65httt/docs/07_bao_cao_danh_gia_mo_hinh_ai.md) | - Báo cáo đánh giá độ chính xác mô hình NLP phân loại tiếng Việt (F1, Confusion Matrix).<br>- Kết quả phát hiện giao dịch bất thường (Isolation Forest + Z-Score).<br>- Kiểm thử ngược dự báo dòng tiền 30 ngày (MAPE) & phân tích Burn-rate. |
+| **08** | [08_ke_hoach_nang_cap_react_auth_gemini.md](file:///d:/HTKDTM/project-htkdtm/nhom13-65httt/docs/08_ke_hoach_nang_cap_react_auth_gemini.md) | - Kế hoạch nâng cấp React Portal (Docker `:3000`), Đăng ký/Đăng nhập JWT đa người dùng.<br>- Trung tâm tùy chọn nguồn lấy dữ liệu ngân hàng cá nhân (Upload, OCR, IMAP, Telegram).<br>- Kiến trúc Trợ lý Chat AI Gemini (Function Calling trên dữ liệu thật PostgreSQL). |
 
 ---
 

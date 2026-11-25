@@ -69,10 +69,10 @@ class DataNormalizer:
         return date_id
 
     @staticmethod
-    def resolve_account_id(db: Session, bank_name: str, account_mask: Optional[str] = None) -> int:
+    def resolve_account_id(db: Session, bank_name: str, account_mask: Optional[str] = None, user_id: int = 1) -> int:
         row = db.execute(
-            text("SELECT account_id FROM dim_account WHERE LOWER(bank_name) = LOWER(:bank) LIMIT 1"),
-            {"bank": bank_name},
+            text("SELECT account_id FROM dim_account WHERE user_id = :uid AND LOWER(bank_name) = LOWER(:bank) LIMIT 1"),
+            {"uid": user_id, "bank": bank_name},
         ).first()
         if row:
             return int(row[0])
@@ -82,11 +82,12 @@ class DataNormalizer:
         )
         inserted = db.execute(
             text("""
-                INSERT INTO dim_account (account_name, bank_name, account_number_mask, account_type, currency, is_active)
-                VALUES (:acc_name, :bank_name, :mask, :acc_type, 'VND', TRUE)
+                INSERT INTO dim_account (user_id, account_name, bank_name, account_number_mask, account_type, currency, is_active)
+                VALUES (:uid, :acc_name, :bank_name, :mask, :acc_type, 'VND', TRUE)
                 RETURNING account_id
             """),
             {
+                "uid": user_id,
                 "acc_name": f"Tài khoản {bank_name}",
                 "bank_name": bank_name,
                 "mask": account_mask or "****0000",

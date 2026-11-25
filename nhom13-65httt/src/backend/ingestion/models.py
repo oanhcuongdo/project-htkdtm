@@ -12,7 +12,10 @@ class RawTransactionDTO:
     direction: str  # 'INCOME' | 'EXPENSE' | 'TRANSFER'
     raw_description: str
     source_type: str  # 'EMAIL' | 'CSV' | 'PDF' | 'TELEGRAM'
+    user_id: int = 1
     account_number_mask: Optional[str] = None
     counterparty_name: Optional[str] = None
+    counterparty_account_mask: Optional[str] = None
+    counterparty_bank: Optional[str] = None
     reference_code: Optional[str] = None
     raw_metadata: Dict[str, Any] = field(default_factory=dict)

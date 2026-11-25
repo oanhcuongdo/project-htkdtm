@@ -7,6 +7,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from api.dependencies import get_db
+from api.security import get_optional_user
 from etl_pipeline.data_quality import DataQualityChecker
 from etl_pipeline.pipeline_runner import ETLPipelineRunner
 from ingestion.email_collector.imap_client import IMAPEmailCollector
@@ -31,8 +32,11 @@ class ReceiptTextRequest(BaseModel):
 
 
 @router.post("/upload-statement")
-async def upload_statement(file: UploadFile = File(...)):
-    """Tải lên file sao kê (.xlsx, .xls, .csv, .pdf), bóc tách vào Staging, khử trùng lặp và nạp vào Data Warehouse."""
+async def upload_statement(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_optional_user),
+):
+    """Tải lên file sao kê (.xlsx, .xls, .csv, .pdf), bóc tách vào Staging, khử trùng lặp và nạp theo user_id."""
     ext = os.path.splitext(file.filename or "")[1].lower()
     if ext not in (".xlsx", ".xls", ".csv", ".pdf"):
         raise HTTPException(status_code=400, detail="Chỉ hỗ trợ file sao kê định dạng .xlsx, .xls, .csv, .pdf")
@@ -54,13 +58,17 @@ async def upload_statement(file: UploadFile = File(...)):
     if not dtos:
         return {"file_name": file.filename, "status": "empty", "message": "Không trích xuất được giao dịch hợp lệ từ file."}
 
-    summary = ETLPipelineRunner().run(dtos, pipeline_name=f"Upload_{file.filename}")
-    return {"file_name": file.filename, "etl_summary": summary}
+    uid = int(current_user["user_id"])
+    summary = ETLPipelineRunner().run(dtos, pipeline_name=f"Upload_U{uid}_{file.filename}", user_id=uid)
+    return {"file_name": file.filename, "user_id": uid, "etl_summary": summary}
 
 
 @router.post("/ingest-email")
-def ingest_email_sample(payload: EmailIngestRequest):
-    """Nhận nội dung email biến động số dư, lưu Staging, bóc tách và nạp vào Kho dữ liệu."""
+def ingest_email_sample(
+    payload: EmailIngestRequest,
+    current_user: dict = Depends(get_optional_user),
+):
+    """Nhận nội dung email biến động số dư, lưu Staging, bóc tách và nạp vào Kho dữ liệu theo user_id."""
     collector = IMAPEmailCollector()
     dtos = collector.process_raw_emails([
         (payload.message_id, payload.sender, payload.subject, "", payload.body_text, datetime.now())
@@ -68,50 +76,77 @@ def ingest_email_sample(payload: EmailIngestRequest):
     if not dtos:
         return {"status": "failed", "message": "Email không khớp định dạng ngân hàng được hỗ trợ (VCB, MBBank, Techcombank, MoMo)."}
 
-    summary = ETLPipelineRunner().run(dtos, pipeline_name="API_Email_Ingest")
-    return {"status": "success", "etl_summary": summary}
+    uid = int(current_user["user_id"])
+    summary = ETLPipelineRunner().run(dtos, pipeline_name=f"API_Email_U{uid}", user_id=uid)
+    return {"status": "success", "user_id": uid, "etl_summary": summary}
 
 
 @router.post("/ingest-receipt-image")
-async def ingest_receipt_image(file: UploadFile = File(...), chat_id: int = 0):
-    """Nhận ảnh hóa đơn/biên lai, chạy Tesseract OCR tiếng Việt và nạp vào Kho dữ liệu."""
+async def ingest_receipt_image(
+    file: UploadFile = File(...),
+    chat_id: int = 0,
+    current_user: dict = Depends(get_optional_user),
+):
+    """Nhận ảnh hóa đơn/biên lai, chạy Tesseract OCR tiếng Việt và nạp vào Kho dữ liệu theo user_id."""
     ext = os.path.splitext(file.filename or "")[1].lower() or ".jpg"
     with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
         tmp.write(await file.read())
         tmp_path = tmp.name
 
     try:
-        bot = FinanceTelegramBot()
-        return bot.handle_receipt_image(file_id=file.filename or "api_upload", chat_id=chat_id, local_image_path=tmp_path)
+        uid = int(current_user["user_id"])
+        ocr_text, dto = ReceiptOCREngine().process_image(tmp_path, chat_id=chat_id)
+        if not dto:
+            return {"status": "failed", "ocr_text": ocr_text, "message": "Không nhận diện được số tiền hợp lệ từ ảnh biên lai."}
+        summary = ETLPipelineRunner().run([dto], pipeline_name=f"API_OCR_U{uid}", user_id=uid)
+        return {
+            "status": "success",
+            "user_id": uid,
+            "extracted": {
+                "amount": abs(dto.amount),
+                "date": dto.transaction_time.isoformat(),
+                "merchant": dto.counterparty_name,
+                "description": dto.raw_description,
+            },
+            "etl_summary": summary,
+        }
     finally:
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
 
 
 @router.post("/ingest-receipt-text")
-def ingest_receipt_text(payload: ReceiptTextRequest):
+def ingest_receipt_text(
+    payload: ReceiptTextRequest,
+    current_user: dict = Depends(get_optional_user),
+):
     """Kiểm thử bóc tách văn bản biên lai OCR và nạp vào Kho dữ liệu."""
     dto = ReceiptOCREngine().parse_receipt_text(payload.ocr_text, chat_id=payload.chat_id)
     if not dto:
         return {"status": "failed", "message": "Không trích xuất được số tiền hợp lệ từ văn bản biên lai."}
-    summary = ETLPipelineRunner().run([dto], pipeline_name="API_Receipt_Text_Ingest")
-    return {"status": "success", "etl_summary": summary}
+    uid = int(current_user["user_id"])
+    summary = ETLPipelineRunner().run([dto], pipeline_name=f"API_Receipt_Text_U{uid}", user_id=uid)
+    return {"status": "success", "user_id": uid, "etl_summary": summary}
 
 
 @router.post("/scan-watch-folder")
 def trigger_watch_folder_scan(force_rescan: bool = False):
-    """Quét thủ công thư mục watch_statements (chứa các file sao kê như SAO_KE_TAI_KHOAN_1.xlsx)."""
+    """Quét thủ công thư mục watch_statements."""
     return scan_watch_folder(force_rescan=force_rescan)
 
 
 @router.get("/logs")
-def get_ingestion_and_dedup_logs(db: Session = Depends(get_db)):
-    """Lấy thống kê tổng quan kho dữ liệu, nhật ký chạy pipeline và nhật ký khử trùng lặp."""
-    fact_count = db.execute(text("SELECT COUNT(*) FROM fact_transactions")).scalar() or 0
+def get_ingestion_and_dedup_logs(
+    current_user: dict = Depends(get_optional_user),
+    db: Session = Depends(get_db),
+):
+    """Lấy thống kê tổng quan kho dữ liệu theo user_id, nhật ký chạy pipeline và nhật ký khử trùng lặp."""
+    uid = int(current_user["user_id"])
+    fact_count = db.execute(text("SELECT COUNT(*) FROM fact_transactions WHERE user_id = :uid"), {"uid": uid}).scalar() or 0
     stg_email_cnt = db.execute(text("SELECT COUNT(*) FROM stg_raw_emails")).scalar() or 0
     stg_stmt_cnt = db.execute(text("SELECT COUNT(*) FROM stg_raw_statements")).scalar() or 0
     stg_rcpt_cnt = db.execute(text("SELECT COUNT(*) FROM stg_raw_receipts")).scalar() or 0
-    dedup_cnt = db.execute(text("SELECT COUNT(*) FROM log_dedup")).scalar() or 0
+    dedup_cnt = db.execute(text("SELECT COUNT(*) FROM log_dedup WHERE user_id = :uid"), {"uid": uid}).scalar() or 0
 
     pipeline_logs = db.execute(
         text("""
@@ -125,11 +160,14 @@ def get_ingestion_and_dedup_logs(db: Session = Depends(get_db)):
         text("""
             SELECT log_id, master_transaction_id, applied_rule, similarity_score, reason, created_at
             FROM log_dedup
+            WHERE user_id = :uid
             ORDER BY log_id DESC LIMIT 10
-        """)
+        """),
+        {"uid": uid},
     ).mappings().all()
 
     return {
+        "user_id": uid,
         "counts": {
             "fact_transactions": int(fact_count),
             "stg_raw_emails": int(stg_email_cnt),

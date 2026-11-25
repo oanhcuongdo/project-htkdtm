@@ -114,6 +114,8 @@ class StatementTabularParser:
         amount_col = col_map.get("số tiền") or col_map.get("amount")
         desc_col = col_map.get("nội dung") or col_map.get("details") or col_map.get("description") or col_map.get("raw_description")
         counterparty_col = col_map.get("đơn vị thụ hưởng/ đơn vị chuyển") or col_map.get("beneficiary/applicant")
+        counterparty_acc_col = col_map.get("tài khoản") or col_map.get("account")
+        counterparty_bank_col = col_map.get("ngân hàng đối tác") or col_map.get("remitter bank")
 
         for idx, row in df.iterrows():
             raw_date = row.get(date_col) if date_col else None
@@ -146,6 +148,10 @@ class StatementTabularParser:
             raw_desc = str(row.get(desc_col)).strip() if desc_col and pd.notna(row.get(desc_col)) else "Giao dịch sao kê"
             counterparty = str(row.get(counterparty_col)).strip() if counterparty_col and pd.notna(row.get(counterparty_col)) else None
 
+            raw_cp_acc = str(row.get(counterparty_acc_col)).strip() if counterparty_acc_col and pd.notna(row.get(counterparty_acc_col)) else ""
+            cp_acc_mask = f"****{raw_cp_acc[-4:]}" if len(raw_cp_acc) >= 4 else (raw_cp_acc or None)
+            cp_bank = str(row.get(counterparty_bank_col)).strip() if counterparty_bank_col and pd.notna(row.get(counterparty_bank_col)) else None
+
             dto = RawTransactionDTO(
                 bank_name=bank_name,
                 account_number_mask=acc_mask or "****5678",
@@ -154,6 +160,8 @@ class StatementTabularParser:
                 direction=direction,
                 raw_description=raw_desc,
                 counterparty_name=counterparty,
+                counterparty_account_mask=cp_acc_mask,
+                counterparty_bank=cp_bank,
                 reference_code=ref_code,
                 source_type="CSV",
                 raw_metadata={"file_name": file_name, "row_number": int(idx) + 1},

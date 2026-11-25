@@ -1,15 +1,12 @@
 import os
 from pathlib import Path
 
+
 def _load_env_file():
-    """
-    Tự động đọc và nạp file .env bằng thư viện chuẩn Python (không phụ thuộc vào package bên ngoài)
-    Giúp VS Code không bị báo lỗi thiếu thư viện python-dotenv khi mở file.
-    """
-    # Tìm file .env ở thư mục gốc của nhóm (nhom13-65httt/.env)
+    """Tự động đọc file .env bằng thư viện chuẩn Python."""
     current_dir = Path(__file__).resolve().parent
     env_path = current_dir.parent.parent.parent / ".env"
-    
+
     if env_path.is_file():
         try:
             with open(env_path, "r", encoding="utf-8") as f:
@@ -19,18 +16,27 @@ def _load_env_file():
                         key, val = line.split("=", 1)
                         key = key.strip()
                         val = val.strip().strip("'\"")
-                        # Chỉ gán nếu chưa có trong biến môi trường
                         os.environ.setdefault(key, val)
         except Exception:
             pass
 
-# Nạp file .env
+
 _load_env_file()
+
 
 class Settings:
     PROJECT_NAME: str = "Personal Finance Intelligence API"
-    VERSION: str = "1.0.0"
+    VERSION: str = "2.0.0"
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
+
+    # Security & JWT
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "htkdtm-nhom13-super-secret-jwt-key-2026!")
+    JWT_ALGORITHM: str = "HS256"
+    JWT_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 ngày
+
+    # Google Gemini AI
+    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
 
     # Cấu hình CSDL PostgreSQL Data Warehouse
     POSTGRES_USER: str = os.getenv("POSTGRES_USER", "finance_user")
@@ -45,5 +51,6 @@ class Settings:
             f"postgresql+psycopg2://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@"
             f"{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
         )
+
 
 settings = Settings()

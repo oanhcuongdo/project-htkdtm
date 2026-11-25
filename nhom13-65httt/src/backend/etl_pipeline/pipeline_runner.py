@@ -14,7 +14,7 @@ from .data_quality import DataQualityChecker
 class ETLPipelineRunner:
     """Điều phối luồng ETL toàn trình: Clean -> Normalize -> Deduplicate -> Load -> Audit."""
 
-    def run(self, dtos: List[RawTransactionDTO], pipeline_name: str = "ETL_Batch_Pipeline") -> dict:
+    def run(self, dtos: List[RawTransactionDTO], pipeline_name: str = "ETL_Batch_Pipeline", user_id: int = 1) -> dict:
         started_at = datetime.now()
         t0 = time.time()
 
@@ -25,9 +25,12 @@ class ETLPipelineRunner:
         with get_db_session() as db:
             for dto in dtos:
                 try:
+                    effective_uid = user_id or dto.user_id or 1
                     vn_dt = DataNormalizer.to_vn_datetime(dto.transaction_time)
                     date_id = DataNormalizer.ensure_dim_date(db, vn_dt)
-                    account_id = DataNormalizer.resolve_account_id(db, dto.bank_name, dto.account_number_mask)
+                    account_id = DataNormalizer.resolve_account_id(
+                        db, dto.bank_name, dto.account_number_mask, user_id=effective_uid
+                    )
 
                     is_internal = DataCleaner.is_internal_transfer(dto.raw_description, dto.counterparty_name)
                     clean_desc = DataCleaner.clean_description(dto.raw_description, dto.counterparty_name)
@@ -60,6 +63,7 @@ class ETLPipelineRunner:
                         tx_time=vn_dt,
                         reference_code=dto.reference_code,
                         clean_description=clean_desc,
+                        user_id=effective_uid,
                     )
 
                     if is_dup and master_id:
@@ -69,6 +73,7 @@ class ETLPipelineRunner:
                             applied_rule=rule or "EXACT_REF_CODE",
                             similarity_score=sim_score,
                             reason=f"Bỏ qua bản ghi trùng nguồn {dto.source_type} (Ref: {dto.reference_code}, ND: {clean_desc[:80]})",
+                            user_id=effective_uid,
                         )
                         deduplicated_count += 1
                         continue
@@ -76,16 +81,19 @@ class ETLPipelineRunner:
                     db.execute(
                         text("""
                             INSERT INTO fact_transactions (
-                                date_id, category_id, account_id, merchant_id, amount, direction,
-                                raw_description, clean_description, is_internal_transfer,
+                                user_id, date_id, category_id, account_id, merchant_id, amount, direction,
+                                raw_description, clean_description, counterparty_name,
+                                counterparty_account_mask, counterparty_bank, is_internal_transfer,
                                 is_anomaly, anomaly_score, reference_code, source_type, created_at
                             ) VALUES (
-                                :date_id, :cat_id, :acc_id, :merch_id, :amount, :direction,
-                                :raw_desc, :clean_desc, :is_internal,
+                                :uid, :date_id, :cat_id, :acc_id, :merch_id, :amount, :direction,
+                                :raw_desc, :clean_desc, :cp_name,
+                                :cp_acc, :cp_bank, :is_internal,
                                 FALSE, 0.0, :ref_code, :source_type, :created_at
                             )
                         """),
                         {
+                            "uid": effective_uid,
                             "date_id": date_id,
                             "cat_id": cat_id,
                             "acc_id": account_id,
@@ -94,6 +102,9 @@ class ETLPipelineRunner:
                             "direction": norm_dir,
                             "raw_desc": DataCleaner.normalize_unicode(dto.raw_description),
                             "clean_desc": clean_desc,
+                            "cp_name": DataCleaner.normalize_unicode(dto.counterparty_name or "") or None,
+                            "cp_acc": dto.counterparty_account_mask,
+                            "cp_bank": dto.counterparty_bank,
                             "is_internal": is_internal,
                             "ref_code": dto.reference_code,
                             "source_type": dto.source_type,

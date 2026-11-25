@@ -4,12 +4,14 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from api.config import settings
 from api.dependencies import check_db_connection
-from api.routers import ai_routes, analytics_routes, ingestion_routes
+from api.routers import ai_routes, analytics_routes, auth_routes, chat_routes, ingestion_routes, sources_routes
+from api.security import ensure_demo_user_ready
 from scheduler.cron_jobs import start_scheduler, stop_scheduler
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    ensure_demo_user_ready()
     start_scheduler()
     yield
     stop_scheduler()
@@ -22,7 +24,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Cấu hình CORS cho phép truy cập từ các ứng dụng frontend/dashboard
+# Cấu hình CORS cho phép truy cập từ React Portal (:3000) và Superset (:8088)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -31,10 +33,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Gắn các router nghiệp vụ
+# Gắn toàn bộ các router nghiệp vụ
+app.include_router(auth_routes.router)
+app.include_router(sources_routes.router)
 app.include_router(ingestion_routes.router)
 app.include_router(ai_routes.router)
 app.include_router(analytics_routes.router)
+app.include_router(chat_routes.router)
 
 
 @app.get("/")
@@ -56,6 +61,7 @@ def healthcheck():
     return {
         "status": "healthy" if db_ok else "degraded",
         "database_connected": db_ok,
+        "gemini_configured": bool(settings.GEMINI_API_KEY and "your_gemini" not in settings.GEMINI_API_KEY),
         "database_target": f"{settings.POSTGRES_HOST}:{settings.POSTGRES_PORT}/{settings.POSTGRES_DB}",
     }
 
@@ -65,6 +71,8 @@ def system_status():
     """Trả về trạng thái các module trong hệ thống."""
     return {
         "modules": {
+            "auth_multi_user": "active",
+            "user_data_sources": "active",
             "ingestion_email": "active",
             "ingestion_statement": "active",
             "ingestion_telegram_ocr": "active",
@@ -75,7 +83,9 @@ def system_status():
             "ai_classifier": "active",
             "ai_anomaly_detector": "active",
             "ai_forecaster": "active",
+            "ai_gemini_chat": "active",
             "analytics_kpi_api": "active",
             "superset_bi": "active",
+            "react_portal": "active",
         }
     }

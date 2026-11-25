@@ -90,6 +90,23 @@ services:
     networks:
       - htkdtm_network
 
+  # ==========================================================
+  # 5. Giao diện Web Portal React (Personal CFO Hub - :3000)
+  # ==========================================================
+  portal:
+    build:
+      context: ./src/frontend/portal
+      dockerfile: Dockerfile
+    container_name: htkdtm_portal
+    restart: unless-stopped
+    ports:
+      - "${PORTAL_PORT:-3000}:80"
+    depends_on:
+      - backend
+      - superset
+    networks:
+      - htkdtm_network
+
 volumes:
   postgres_data:
     name: htkdtm_postgres_data

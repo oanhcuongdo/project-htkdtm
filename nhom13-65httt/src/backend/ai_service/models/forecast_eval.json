@@ -1,13 +1,13 @@
 {
   "model_version": "SARIMAX_ARIMA_v1.0",
-  "run_date": "2026-11-25T01:05:06.483647",
+  "run_date": "2026-11-25T02:00:00.857023",
   "horizon_days": 30,
   "forecast_start": "2026-11-25",
   "forecast_end": "2026-12-24",
   "total_predicted_30d_expense": 24864921.0,
   "avg_daily_predicted_expense": 828831.0,
   "persisted_to_db": true,
-  "duration_seconds": 0.37,
+  "duration_seconds": 0.26,
   "evaluation": {
     "months_available": 10,
     "backtest_months": 3,

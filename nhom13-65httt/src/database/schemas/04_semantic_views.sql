@@ -17,11 +17,15 @@ DROP VIEW IF EXISTS vw_clean_transactions CASCADE;
 CREATE VIEW vw_clean_transactions AS
 SELECT 
     f.transaction_id,
+    f.user_id,
     f.amount,
     ABS(f.amount) AS abs_amount,
     f.direction,
     f.raw_description,
     COALESCE(f.clean_description, f.raw_description) AS clean_description,
+    COALESCE(NULLIF(TRIM(f.counterparty_name), ''), m.merchant_name, 'Khác / Cá nhân') AS counterparty_name,
+    COALESCE(NULLIF(TRIM(f.counterparty_account_mask), ''), 'N/A') AS counterparty_account_mask,
+    COALESCE(NULLIF(TRIM(f.counterparty_bank), ''), '') AS counterparty_bank,
     f.is_anomaly,
     f.anomaly_score,
     f.reference_code,

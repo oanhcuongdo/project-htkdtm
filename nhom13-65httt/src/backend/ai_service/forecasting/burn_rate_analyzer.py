@@ -7,28 +7,42 @@ from api.dependencies import get_db_session
 
 class BurnRateAnalyzer:
     """
-    Phân tích tốc độ đốt ngân sách (Burn-rate) và dự phóng số dư cuối tháng
+    Phân tích tốc độ đốt ngân sách (Burn-rate) và dự phóng số dư cuối tháng theo từng user_id
     nhằm trả lời trực tiếp Câu hỏi nghiệp vụ số 4 trong Đề cương.
     """
 
     @staticmethod
-    def analyze_month(year: Optional[int] = None, month: Optional[int] = None) -> Dict[str, Any]:
+    def analyze_month(year: Optional[int] = None, month: Optional[int] = None, user_id: int = 1) -> Dict[str, Any]:
         with get_db_session() as db:
-            # Nếu không truyền tháng, tự động lấy tháng gần nhất có dữ liệu trong kho
             if not year or not month:
                 latest = db.execute(
                     text("""
                         SELECT d.year, d.month, MAX(d.day) AS latest_day
                         FROM fact_transactions f
                         JOIN dim_date d ON f.date_id = d.date_id
-                        WHERE f.is_internal_transfer = FALSE
+                        WHERE f.user_id = :uid AND f.is_internal_transfer = FALSE
                         GROUP BY d.year, d.month
                         ORDER BY d.year DESC, d.month DESC
                         LIMIT 1
-                    """)
+                    """),
+                    {"uid": user_id},
                 ).first()
                 if not latest:
-                    return {"status": "empty", "message": "Chưa có dữ liệu giao dịch trong kho."}
+                    return {
+                        "status": "empty",
+                        "period": "N/A",
+                        "mtd_income": 0,
+                        "mtd_expense": 0,
+                        "current_net_balance": 0,
+                        "daily_burn_rate": 0,
+                        "projected_eom_expense": 0,
+                        "projected_eom_balance": 0,
+                        "projected_savings_rate_pct": 0,
+                        "budget_utilization_pct": 0,
+                        "alert_level": "INFO",
+                        "advice": "Bạn chưa có giao dịch nào. Hãy tải lên sao kê Excel/CSV hoặc kết nối Email để hệ thống phân tích!",
+                        "over_budget_categories": [],
+                    }
                 year, month, days_elapsed = int(latest[0]), int(latest[1]), int(latest[2])
             else:
                 latest_day_row = db.execute(
@@ -36,31 +50,29 @@ class BurnRateAnalyzer:
                         SELECT COALESCE(MAX(d.day), 1)
                         FROM fact_transactions f
                         JOIN dim_date d ON f.date_id = d.date_id
-                        WHERE d.year = :y AND d.month = :m AND f.is_internal_transfer = FALSE
+                        WHERE f.user_id = :uid AND d.year = :y AND d.month = :m AND f.is_internal_transfer = FALSE
                     """),
-                    {"y": year, "m": month},
+                    {"uid": user_id, "y": year, "m": month},
                 ).scalar()
                 days_elapsed = int(latest_day_row or 1)
 
             days_in_month = calendar.monthrange(year, month)[1]
             days_remaining = max(0, days_in_month - days_elapsed)
 
-            # Tổng thu nhập và chi tiêu lũy kế trong tháng
             totals = db.execute(
                 text("""
                     SELECT
                         COALESCE(SUM(CASE WHEN direction = 'INCOME' THEN amount ELSE 0 END), 0)::FLOAT AS mtd_income,
                         COALESCE(SUM(CASE WHEN direction = 'EXPENSE' THEN ABS(amount) ELSE 0 END), 0)::FLOAT AS mtd_expense
                     FROM vw_clean_transactions
-                    WHERE year = :y AND month = :m
+                    WHERE user_id = :uid AND year = :y AND month = :m
                 """),
-                {"y": year, "m": month},
+                {"uid": user_id, "y": year, "m": month},
             ).first()
 
             mtd_income = float(totals[0])
             mtd_expense = float(totals[1])
 
-            # Tổng hạn mức ngân sách tháng của toàn bộ danh mục chi
             total_budget = float(
                 db.execute(
                     text("SELECT COALESCE(SUM(monthly_budget), 0)::FLOAT FROM dim_category WHERE category_type = 'EXPENSE'")
@@ -69,16 +81,16 @@ class BurnRateAnalyzer:
 
             daily_burn_rate = mtd_expense / max(days_elapsed, 1)
 
-            # Ưu tiên lấy phần chi tiêu dự phóng cho các ngày còn lại từ bảng ai_spending_forecast nếu đã chạy
             forecast_rem = db.execute(
                 text("""
                     SELECT COALESCE(SUM(predicted_amount), 0)::FLOAT, COUNT(*)
                     FROM ai_spending_forecast
-                    WHERE EXTRACT(YEAR FROM forecast_date) = :y
+                    WHERE user_id = :uid
+                      AND EXTRACT(YEAR FROM forecast_date) = :y
                       AND EXTRACT(MONTH FROM forecast_date) = :m
                       AND EXTRACT(DAY FROM forecast_date) > :d_elapsed
                 """),
-                {"y": year, "m": month, "d_elapsed": days_elapsed},
+                {"uid": user_id, "y": year, "m": month, "d_elapsed": days_elapsed},
             ).first()
 
             if forecast_rem and int(forecast_rem[1]) > 0:
@@ -100,7 +112,6 @@ class BurnRateAnalyzer:
                 round((projected_eom_expense * 100.0) / total_budget, 2) if total_budget > 0 else 0.0
             )
 
-            # Tính ngày dự kiến cạn nguồn thu tháng nếu tốc độ tiêu vượt thu
             remaining_cash = max(0.0, mtd_income - mtd_expense)
             days_until_zero = int(remaining_cash / daily_burn_rate) if daily_burn_rate > 0 else 999
 
@@ -125,16 +136,21 @@ class BurnRateAnalyzer:
                     f"{projected_eom_balance:,.0f} VND (tỷ lệ tiết kiệm ròng {projected_savings_rate_pct:.1f}%)."
                 )
 
-            # Lấy danh sách danh mục đang vượt trần ngân sách trong tháng
             over_budget_rows = db.execute(
                 text("""
-                    SELECT category_name, monthly_budget::FLOAT, actual_spent::FLOAT,
-                           over_budget_amount::FLOAT, over_budget_pct::FLOAT
-                    FROM vw_category_budget_monitoring
-                    WHERE year = :y AND month = :m AND is_over_budget = TRUE
+                    SELECT
+                        category_name,
+                        monthly_budget::FLOAT,
+                        SUM(abs_amount)::FLOAT AS actual_spent,
+                        (SUM(abs_amount) - monthly_budget)::FLOAT AS over_budget_amount,
+                        ROUND((SUM(abs_amount) - monthly_budget) * 100.0 / NULLIF(monthly_budget, 0), 2)::FLOAT AS over_budget_pct
+                    FROM vw_clean_transactions
+                    WHERE user_id = :uid AND year = :y AND month = :m AND direction = 'EXPENSE' AND monthly_budget > 0
+                    GROUP BY category_name, monthly_budget
+                    HAVING SUM(abs_amount) > monthly_budget
                     ORDER BY over_budget_pct DESC
                 """),
-                {"y": year, "m": month},
+                {"uid": user_id, "y": year, "m": month},
             ).mappings().all()
 
         return {
