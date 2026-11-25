@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.backend.api.routers import auth, interactions, listings, reports, stubs
+from src.backend.api.routers import admin_bi, auth, interactions, listings, reports, stubs
 from src.backend.config.settings import settings
 
 app = FastAPI(
@@ -25,6 +25,7 @@ app.add_middleware(
 app.include_router(listings.router)
 app.include_router(interactions.router)
 app.include_router(reports.router)
+app.include_router(admin_bi.router)
 app.include_router(auth.router)
 app.include_router(stubs.router)
 
