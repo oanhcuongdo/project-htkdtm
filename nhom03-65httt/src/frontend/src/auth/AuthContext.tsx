@@ -26,7 +26,7 @@ export const getAuthToken = (): string | null => {
 }
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1"
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1"
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
@@ -110,6 +110,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setToken(data.access_token)
       setUser(session)
     } catch (err) {
+      if (
+        err instanceof TypeError ||
+        (err instanceof Error && err.message.toLowerCase().includes("failed to fetch"))
+      ) {
+        throw new Error("Không thể kết nối đến máy chủ xác thực")
+      }
       if (err instanceof Error) {
         throw err
       }

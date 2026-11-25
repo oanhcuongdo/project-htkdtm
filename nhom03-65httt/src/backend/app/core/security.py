@@ -2,7 +2,8 @@
 
 Quy tắc:
 - Mật khẩu lưu băm; không có tài khoản hay mật khẩu viết cứng trong mã.
-- Bí mật ký JWT chỉ đọc từ biến môi trường (.env), không có giá trị ngầm định trong mã.
+- Bí mật ký JWT chỉ đọc từ biến môi trường (.env), có tối thiểu 32 ký tự, không có giá trị ngầm định trong mã.
+- So sánh chuỗi bảo mật an toàn trên mảng byte UTF-8 để hỗ trợ đầy đủ tiếng Việt có dấu và emoji.
 """
 
 from __future__ import annotations
@@ -28,9 +29,26 @@ from app.schemas.auth import UserOut
 oauth2_scheme = HTTPBearer(auto_error=False)
 
 
+def _safe_equal(a: str, b: str) -> bool:
+    """So sánh an toàn thời gian hằng số trên chuỗi byte UTF-8 (hỗ trợ tiếng Việt và emoji)."""
+    return secrets.compare_digest(a.encode("utf-8"), b.encode("utf-8"))
+
+
 def _get_env_secret() -> str:
-    """Lấy bí mật ký JWT từ biến môi trường AUTH_JWT_SECRET."""
+    """Lấy bí mật ký JWT từ biến môi trường AUTH_JWT_SECRET.
+    Yêu cầu khóa phải có ít nhất 32 ký tự để đảm bảo độ bảo mật mật mã học.
+    """
     secret = os.getenv("AUTH_JWT_SECRET", "").strip()
+    if not secret:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="AUTH_JWT_SECRET chưa được cấu hình trên máy chủ",
+        )
+    if len(secret) < 32:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="AUTH_JWT_SECRET phải có ít nhất 32 ký tự",
+        )
     return secret
 
 
@@ -75,10 +93,10 @@ def verify_password(plain_password: str, stored_hash_or_plain: str) -> bool:
         if len(parts) == 3:
             _, salt, expected_digest = parts
             actual_digest = hashlib.sha256((salt + plain_password).encode("utf-8")).hexdigest()
-            return secrets.compare_digest(actual_digest, expected_digest)
+            return _safe_equal(actual_digest, expected_digest)
 
-    # Nếu chuỗi trong môi trường là mật khẩu thuần, so sánh bảo mật theo thời gian hằng số
-    return secrets.compare_digest(plain_password, stored_hash_or_plain)
+    # Nếu chuỗi trong môi trường là mật khẩu thuần, so sánh an toàn qua UTF-8 bytes
+    return _safe_equal(plain_password, stored_hash_or_plain)
 
 
 def authenticate_user(username: str, password: str) -> UserOut | None:
@@ -88,11 +106,11 @@ def authenticate_user(username: str, password: str) -> UserOut | None:
     viewer_user = os.getenv("AUTH_VIEWER_USER", "").strip()
     viewer_pass = os.getenv("AUTH_VIEWER_PASSWORD", "").strip()
 
-    if admin_user and secrets.compare_digest(username, admin_user):
+    if admin_user and _safe_equal(username, admin_user):
         if admin_pass and verify_password(password, admin_pass):
             return UserOut(username=admin_user, role="admin")
 
-    if viewer_user and secrets.compare_digest(username, viewer_user):
+    if viewer_user and _safe_equal(username, viewer_user):
         if viewer_pass and verify_password(password, viewer_pass):
             return UserOut(username=viewer_user, role="viewer")
 
@@ -105,11 +123,6 @@ def create_access_token(
 ) -> tuple[str, int]:
     """Tạo JWT access token. Trả về cặp (token, số giây hiệu lực)."""
     secret = _get_env_secret()
-    if not secret:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="AUTH_JWT_SECRET chưa được cấu hình trên máy chủ",
-        )
 
     minutes = _get_token_minutes()
     if expires_delta is not None:
@@ -128,14 +141,14 @@ def create_access_token(
 def decode_access_token(token: str) -> dict[str, Any]:
     """Giải mã và xác minh JWT token."""
     secret = _get_env_secret()
-    if not secret:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="AUTH_JWT_SECRET chưa được cấu hình trên máy chủ",
-        )
 
     try:
-        payload = jwt.decode(token, secret, algorithms=["HS256"])
+        payload = jwt.decode(
+            token,
+            secret,
+            algorithms=["HS256"],
+            options={"require": ["exp"]},
+        )
         return payload
     except jwt.ExpiredSignatureError:
         raise HTTPException(

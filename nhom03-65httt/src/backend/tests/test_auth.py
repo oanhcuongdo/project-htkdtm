@@ -1,6 +1,9 @@
 """Kiểm thử xác thực JWT và phân quyền Admin/Viewer (HA3, Nhóm 03)."""
 
+import base64
 from datetime import timedelta
+import json
+import jwt
 import pytest
 from fastapi.testclient import TestClient
 
@@ -169,3 +172,83 @@ def test_missing_secret_returns_500(monkeypatch):
     )
     assert res.status_code == 500
     assert "AUTH_JWT_SECRET" in res.json()["detail"]
+
+
+@pytest.mark.parametrize("username,password", [
+    ("quảntrị", "x"), (TEST_ADMIN_USER, "mậtkhẩu"), ("admin😀", "x"),
+])
+def test_login_non_ascii_returns_401(username, password):
+    """A1: Tên đăng nhập hoặc mật khẩu có dấu tiếng Việt, emoji trả 401 chứ không 500."""
+    res = client.post("/api/v1/auth/login", json={"username": username, "password": password})
+    assert res.status_code == 401
+
+
+def test_short_secret_returns_500(monkeypatch):
+    """A2: Khóa ký AUTH_JWT_SECRET dưới 32 ký tự bị từ chối 500."""
+    monkeypatch.setenv("AUTH_JWT_SECRET", "123")
+    res = client.post(
+        "/api/v1/auth/login",
+        json={"username": TEST_ADMIN_USER, "password": TEST_ADMIN_PASS},
+    )
+    assert res.status_code == 500
+    assert "ít nhất 32 ký tự" in res.json()["detail"]
+
+
+def test_token_alg_none_returns_401():
+    """A4: Token giả mạo dùng thuật toán alg=none bị từ chối 401."""
+    header = base64.urlsafe_b64encode(b'{"alg":"none","typ":"JWT"}').decode().rstrip("=")
+    payload = base64.urlsafe_b64encode(
+        f'{{"sub":"{TEST_ADMIN_USER}","role":"admin","exp":9999999999}}'.encode()
+    ).decode().rstrip("=")
+    token_none = f"{header}.{payload}."
+    res = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token_none}"})
+    assert res.status_code == 401
+
+
+def test_token_different_key_returns_401():
+    """A4: Token ký bằng khóa khác bị từ chối 401."""
+    other_key = "a" * 32
+    token = jwt.encode(
+        {"sub": TEST_ADMIN_USER, "role": "admin", "exp": 9999999999},
+        other_key,
+        algorithm="HS256",
+    )
+    res = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})
+    assert res.status_code == 401
+
+
+def test_tampered_role_returns_401():
+    """A4: Token sửa payload từ viewer thành admin nhưng giữ chữ ký cũ bị từ chối 401."""
+    login_res = client.post(
+        "/api/v1/auth/login",
+        json={"username": TEST_VIEWER_USER, "password": TEST_VIEWER_PASS},
+    )
+    token = login_res.json()["access_token"]
+    parts = token.split(".")
+    assert len(parts) == 3
+
+    padded = parts[1] + "=" * ((4 - len(parts[1]) % 4) % 4)
+    payload_data = json.loads(base64.urlsafe_b64decode(padded.encode()).decode())
+    payload_data["role"] = "admin"
+    tampered_payload = (
+        base64.urlsafe_b64encode(json.dumps(payload_data).encode()).decode().rstrip("=")
+    )
+    tampered_token = f"{parts[0]}.{tampered_payload}.{parts[2]}"
+
+    res = client.get(
+        "/api/v1/auth/admin/ping",
+        headers={"Authorization": f"Bearer {tampered_token}"},
+    )
+    assert res.status_code == 401
+
+
+def test_token_missing_exp_returns_401():
+    """A3/A4: Token không có trường exp (hạn sử dụng) bị từ chối 401."""
+    token_no_exp = jwt.encode(
+        {"sub": TEST_ADMIN_USER, "role": "admin"},
+        TEST_JWT_SECRET,
+        algorithm="HS256",
+    )
+    res = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token_no_exp}"})
+    assert res.status_code == 401
+
