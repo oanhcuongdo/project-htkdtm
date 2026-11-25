@@ -58,6 +58,14 @@ services:
       PLATFORMS_FILE: /app/config/platforms.yml
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173}
       APP_ENV: ${APP_ENV:-dev}
+      # Đăng nhập JWT (API auth do Hoàng Anh làm). Không có giá trị mặc định cho khóa và mật khẩu;
+      # API từ chối khởi động nếu thiếu AUTH_JWT_SECRET khi đã bật router xác thực.
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-}
+      AUTH_TOKEN_MINUTES: ${AUTH_TOKEN_MINUTES:-60}
+      AUTH_ADMIN_USER: ${AUTH_ADMIN_USER:-admin}
+      AUTH_ADMIN_PASSWORD: ${AUTH_ADMIN_PASSWORD:-}
+      AUTH_VIEWER_USER: ${AUTH_VIEWER_USER:-viewer}
+      AUTH_VIEWER_PASSWORD: ${AUTH_VIEWER_PASSWORD:-}
     ports:
       - "127.0.0.1:${API_PORT:-8000}:8000"
     volumes:
