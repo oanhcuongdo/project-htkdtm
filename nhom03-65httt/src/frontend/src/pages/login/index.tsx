@@ -1,6 +1,6 @@
 import React, { useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { GraduationCap, ShieldCheck, UserCheck, AlertCircle, Sparkles, ArrowRight } from "lucide-react"
+import { GraduationCap, ShieldCheck, UserCheck, AlertCircle, Sparkles, Loader2, KeyRound } from "lucide-react"
 
 import { useAuth } from "@/auth/AuthContext"
 import { Button } from "@/components/ui/button"
@@ -11,11 +11,13 @@ import { Badge } from "@/components/ui/badge"
 import { ThemeToggle } from "@/components/theme-toggle"
 
 export default function LoginPage() {
-  const { login, loginAsAdmin, loginAsViewer, isAuthenticated } = useAuth()
+  const { login, isAuthenticated } = useAuth()
   const navigate = useNavigate()
 
-  const [email, setEmail] = useState("")
+  const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
 
   React.useEffect(() => {
     if (isAuthenticated) {
@@ -23,20 +25,36 @@ export default function LoginPage() {
     }
   }, [isAuthenticated, navigate])
 
-  const handleCustomLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    login(email || "demo@eduvision.vn")
-    navigate("/tong-quan")
+    setErrorMessage(null)
+
+    if (!username.trim() || !password) {
+      setErrorMessage("Vui lòng điền đầy đủ tên đăng nhập và mật khẩu.")
+      return
+    }
+
+    try {
+      setIsLoading(true)
+      await login(username, password)
+      navigate("/tong-quan", { replace: true })
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : "Đăng nhập thất bại. Vui lòng kiểm tra lại.")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  const handleAdminQuick = () => {
-    loginAsAdmin()
-    navigate("/tong-quan")
+  const fillAdminAccount = () => {
+    setUsername("admin")
+    setPassword("")
+    setErrorMessage(null)
   }
 
-  const handleViewerQuick = () => {
-    loginAsViewer()
-    navigate("/tong-quan")
+  const fillViewerAccount = () => {
+    setUsername("viewer")
+    setPassword("")
+    setErrorMessage(null)
   }
 
   return (
@@ -47,16 +65,23 @@ export default function LoginPage() {
       </div>
 
       <div className="w-full max-w-[440px] space-y-3.5 my-auto py-6">
-        {/* Banner thông báo demo */}
-        <div className="flex items-start gap-2.5 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs sm:text-sm text-amber-800 dark:text-amber-300 shadow-sm">
-          <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+        {/* Banner thông báo xác thực JWT thật */}
+        <div className="flex items-start gap-2.5 rounded-lg border border-primary/30 bg-primary/10 p-3 text-xs sm:text-sm text-foreground shadow-sm">
+          <KeyRound className="h-4 w-4 shrink-0 text-primary mt-0.5" />
           <div className="leading-snug">
-            <span className="font-semibold block">Đăng nhập demo, chưa kết nối máy chủ</span>
-            <span className="text-xs text-amber-700/80 dark:text-amber-300/80">
-              Chọn một trong hai vai trò bên dưới để kiểm thử phân quyền giao diện.
+            <span className="font-semibold block">Hệ thống xác thực JWT & Phân quyền</span>
+            <span className="text-xs text-muted-foreground">
+              Đăng nhập bằng tài khoản cấu hình trong tệp <code>.env</code> (AUTH_ADMIN_USER / AUTH_VIEWER_USER).
             </span>
           </div>
         </div>
+
+        {errorMessage && (
+          <div className="flex items-start gap-2.5 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-xs sm:text-sm text-destructive shadow-sm animate-in fade-in-50">
+            <AlertCircle className="h-4 w-4 shrink-0 text-destructive mt-0.5" />
+            <div className="leading-snug">{errorMessage}</div>
+          </div>
+        )}
 
         <Card className="border-border/80 shadow-lg">
           <CardHeader className="text-center pb-3 pt-5 px-4 sm:px-6">
@@ -72,97 +97,61 @@ export default function LoginPage() {
           </CardHeader>
 
           <CardContent className="space-y-4 px-4 sm:px-6">
-            {/* Hai nút đăng nhập nhanh dạng Option Card responsive */}
+            {/* Hai nút điền nhanh tài khoản mẫu */}
             <div className="space-y-2">
               <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider text-center">
-                Vào nhanh theo vai trò (1 chạm)
+                Chọn vai trò đăng nhập
               </p>
 
-              <div className="flex flex-col gap-2">
-                {/* Nút Admin */}
+              <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
-                  onClick={handleAdminQuick}
-                  className="group relative flex w-full items-center justify-between rounded-lg border border-primary/30 bg-primary/5 p-3 text-left transition-all hover:bg-primary/10 hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
+                  onClick={fillAdminAccount}
+                  className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 p-2.5 text-left transition-all hover:bg-primary/10 hover:border-primary/50 cursor-pointer"
                 >
-                  <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground">
-                      <ShieldCheck className="h-5 w-5" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-xs sm:text-sm font-semibold text-foreground">
-                          Vào với tư cách Quản trị viên (Admin)
-                        </span>
-                        <Badge variant="default" className="text-[9px] py-0 px-1 h-3.5 leading-none">
-                          Admin
-                        </Badge>
-                      </div>
-                      <p className="text-[11px] text-muted-foreground truncate mt-0.5">
-                        Xem tất cả 9 phân hệ và toàn quyền Quản trị
-                      </p>
-                    </div>
+                  <ShieldCheck className="h-4 w-4 text-primary shrink-0" />
+                  <div className="min-w-0">
+                    <div className="text-xs font-semibold text-foreground leading-tight">Admin</div>
+                    <div className="text-[10px] text-muted-foreground truncate">Toàn quyền hệ thống</div>
                   </div>
-                  <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
                 </button>
 
-                {/* Nút Viewer */}
                 <button
                   type="button"
-                  onClick={handleViewerQuick}
-                  className="group relative flex w-full items-center justify-between rounded-lg border border-border bg-card p-3 text-left transition-all hover:bg-accent/60 hover:border-border/80 focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
+                  onClick={fillViewerAccount}
+                  className="flex items-center gap-2 rounded-lg border border-border bg-card p-2.5 text-left transition-all hover:bg-accent/60 hover:border-border/80 cursor-pointer"
                 >
-                  <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-secondary text-secondary-foreground border border-border/50">
-                      <UserCheck className="h-5 w-5" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-xs sm:text-sm font-semibold text-foreground">
-                          Vào với tư cách Người xem (Viewer)
-                        </span>
-                        <Badge variant="secondary" className="text-[9px] py-0 px-1 h-3.5 leading-none">
-                          Viewer
-                        </Badge>
-                      </div>
-                      <p className="text-[11px] text-muted-foreground truncate mt-0.5">
-                        Xem 8 phân hệ; bị chặn ở trang Quản trị
-                      </p>
-                    </div>
+                  <UserCheck className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <div className="min-w-0">
+                    <div className="text-xs font-semibold text-foreground leading-tight">Viewer</div>
+                    <div className="text-[10px] text-muted-foreground truncate">Chỉ đọc báo cáo</div>
                   </div>
-                  <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-foreground group-hover:translate-x-0.5 transition-all" />
                 </button>
               </div>
             </div>
 
-            <div className="relative my-2">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-border/70" />
-              </div>
-              <div className="relative flex justify-center text-[11px] uppercase">
-                <span className="bg-card px-2 text-muted-foreground font-medium">hoặc tự nhập email</span>
-              </div>
-            </div>
-
-            {/* Form đăng nhập giả */}
-            <form onSubmit={handleCustomLogin} className="space-y-3">
+            {/* Form đăng nhập thật kết nối API FastAPI */}
+            <form onSubmit={handleLogin} className="space-y-3">
               <div className="space-y-1">
-                <Label htmlFor="email" className="text-xs font-medium">
-                  Email (chứa từ "admin" sẽ nhận quyền Admin)
+                <Label htmlFor="username" className="text-xs font-medium">
+                  Tên đăng nhập
                 </Label>
                 <Input
-                  id="email"
+                  id="username"
                   type="text"
-                  placeholder="admin@eduvision.vn hoặc user@eduvision.vn"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="admin hoặc viewer"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   className="h-9 text-xs sm:text-sm"
+                  autoComplete="username"
+                  disabled={isLoading}
+                  required
                 />
               </div>
 
               <div className="space-y-1">
                 <Label htmlFor="password" className="text-xs font-medium">
-                  Mật khẩu giả (nhận bất kỳ giá trị nào)
+                  Mật khẩu
                 </Label>
                 <Input
                   id="password"
@@ -171,15 +160,25 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="h-9 text-xs sm:text-sm"
+                  autoComplete="current-password"
+                  disabled={isLoading}
+                  required
                 />
               </div>
 
               <Button
                 type="submit"
-                variant="outline"
                 className="w-full cursor-pointer h-9 text-xs sm:text-sm font-medium mt-1"
+                disabled={isLoading}
               >
-                Đăng nhập vào hệ thống
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Đang xác thực...
+                  </>
+                ) : (
+                  "Đăng nhập hệ thống"
+                )}
               </Button>
             </form>
           </CardContent>
@@ -190,7 +189,7 @@ export default function LoginPage() {
               <span>Đồ án HTKDTM - Nhóm 03 (65HTTT)</span>
             </div>
             <p className="text-[11px] text-muted-foreground">
-              Phiên làm việc được lưu trên trình duyệt qua khóa <code>eduvision.session</code>
+              Phiên làm việc được ký bằng JWT và lưu trong <code>localStorage</code>
             </p>
           </CardFooter>
         </Card>
