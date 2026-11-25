@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from api.config import settings
 from api.dependencies import check_db_connection
-from api.routers import ingestion_routes
+from api.routers import ai_routes, analytics_routes, ingestion_routes
 from scheduler.cron_jobs import start_scheduler, stop_scheduler
 
 
@@ -33,6 +33,8 @@ app.add_middleware(
 
 # Gắn các router nghiệp vụ
 app.include_router(ingestion_routes.router)
+app.include_router(ai_routes.router)
+app.include_router(analytics_routes.router)
 
 
 @app.get("/")
@@ -70,9 +72,10 @@ def system_status():
             "data_quality_gate": "active",
             "scheduler": "running",
             "data_warehouse": "initialized",
-            "ai_classifier": "pending_phase_3",
-            "ai_anomaly_detector": "pending_phase_3",
-            "ai_forecaster": "pending_phase_3",
+            "ai_classifier": "active",
+            "ai_anomaly_detector": "active",
+            "ai_forecaster": "active",
+            "analytics_kpi_api": "active",
             "superset_bi": "active",
         }
     }

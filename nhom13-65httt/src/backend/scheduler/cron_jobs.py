@@ -3,10 +3,12 @@ import os
 from apscheduler.schedulers.background import BackgroundScheduler
 from sqlalchemy import text
 
+from ai_service.anomaly_detection import AnomalyDetectionService
+from ai_service.forecasting import CashflowForecaster
 from api.dependencies import get_db_session
 from etl_pipeline.pipeline_runner import ETLPipelineRunner
 from ingestion.email_collector.imap_client import IMAPEmailCollector
-from ingestion.statement_parser import StatementTabularParser, StatementPDFParser
+from ingestion.statement_parser import StatementPDFParser, StatementTabularParser
 
 logger = logging.getLogger(__name__)
 
@@ -59,12 +61,26 @@ def scan_watch_folder(force_rescan: bool = False) -> dict:
     return {"scanned_files": len(details), "details": details}
 
 
+def job_daily_ai_refresh():
+    """Tác vụ hằng ngày: chạy lại Phát hiện giao dịch bất thường và Dự báo dòng tiền 30 ngày."""
+    try:
+        anom_res = AnomalyDetectionService().detect_and_update_db(persist=True)
+        fc_res = CashflowForecaster().run_forecast(horizon_days=30, persist=True)
+        logger.info(
+            f"Daily AI refresh hoàn thành: {anom_res.get('anomalies_detected')} anomalies, "
+            f"MAPE={fc_res.get('evaluation', {}).get('mape_pct')}%"
+        )
+    except Exception as exc:
+        logger.error(f"Lỗi khi chạy job_daily_ai_refresh: {exc}")
+
+
 def start_scheduler():
     if not scheduler.running:
         scheduler.add_job(job_poll_emails, "interval", minutes=15, id="email_poll_job", replace_existing=True)
         scheduler.add_job(scan_watch_folder, "interval", minutes=5, id="watch_folder_job", replace_existing=True)
+        scheduler.add_job(job_daily_ai_refresh, "cron", hour=2, minute=0, id="daily_ai_job", replace_existing=True)
         scheduler.start()
-        logger.info("APScheduler đã khởi động: Email (15 phút/lần), Watch Folder (5 phút/lần).")
+        logger.info("APScheduler đã khởi động: Email (15p), Watch Folder (5p), AI Refresh (02:00 hàng ngày).")
 
 
 def stop_scheduler():

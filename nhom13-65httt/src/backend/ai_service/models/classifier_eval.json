@@ -1,0 +1,363 @@
+{
+  "model_type": "Hybrid Rule-Based + TF-IDF (Word 1-2 & Char 3-5) + Calibrated LinearSVC",
+  "trained_at": "2026-11-25T01:07:23.938625",
+  "total_samples": 1028,
+  "train_samples": 822,
+  "test_samples": 206,
+  "num_classes": 13,
+  "metrics": {
+    "accuracy": 0.9854,
+    "f1_weighted": 0.9862,
+    "f1_macro": 0.9746,
+    "cv5_f1_mean": 0.9606,
+    "cv5_f1_std": 0.0161,
+    "curated_unseen_accuracy": 0.902,
+    "curated_unseen_f1_weighted": 0.8988
+  },
+  "kpi_target_f1": 0.85,
+  "kpi_passed": true,
+  "class_labels": [
+    {
+      "category_id": 1,
+      "category_name": "Ăn uống & Cà phê"
+    },
+    {
+      "category_id": 2,
+      "category_name": "Tiền thuê nhà & Phòng trọ"
+    },
+    {
+      "category_id": 3,
+      "category_name": "Điện nước & Internet"
+    },
+    {
+      "category_id": 4,
+      "category_name": "Xăng xe & Đi lại"
+    },
+    {
+      "category_id": 5,
+      "category_name": "Chăm sóc sức khỏe & Y tế"
+    },
+    {
+      "category_id": 6,
+      "category_name": "Mua sắm & Đồ dùng"
+    },
+    {
+      "category_id": 7,
+      "category_name": "Giải trí & Phim ảnh"
+    },
+    {
+      "category_id": 8,
+      "category_name": "Gặp gỡ bạn bè & Tiệc tùng"
+    },
+    {
+      "category_id": 10,
+      "category_name": "Quỹ tiết kiệm dự phòng"
+    },
+    {
+      "category_id": 12,
+      "category_name": "Lương cố định hàng tháng"
+    },
+    {
+      "category_id": 13,
+      "category_name": "Thưởng & Thu nhập ngoài (Freelance)"
+    },
+    {
+      "category_id": 14,
+      "category_name": "Lãi tiền gửi & Cổ tức"
+    },
+    {
+      "category_id": 15,
+      "category_name": "Chuyển tiền nội bộ giữa các ví"
+    }
+  ],
+  "confusion_matrix": [
+    [
+      64,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      5,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      8,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      22,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      15,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      25,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      16,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      17,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      6,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      6,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      8,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      3,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      8
+    ]
+  ],
+  "classification_report": {
+    "Ăn uống & Cà phê": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 64.0
+    },
+    "Tiền thuê nhà & Phòng trọ": {
+      "precision": 1.0,
+      "recall": 0.8333333333333334,
+      "f1-score": 0.9090909090909091,
+      "support": 6.0
+    },
+    "Điện nước & Internet": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 8.0
+    },
+    "Xăng xe & Đi lại": {
+      "precision": 1.0,
+      "recall": 0.9565217391304348,
+      "f1-score": 0.9777777777777777,
+      "support": 23.0
+    },
+    "Chăm sóc sức khỏe & Y tế": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 15.0
+    },
+    "Mua sắm & Đồ dùng": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 25.0
+    },
+    "Giải trí & Phim ảnh": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 16.0
+    },
+    "Gặp gỡ bạn bè & Tiệc tùng": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 17.0
+    },
+    "Quỹ tiết kiệm dự phòng": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 6.0
+    },
+    "Lương cố định hàng tháng": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 6.0
+    },
+    "Thưởng & Thu nhập ngoài (Freelance)": {
+      "precision": 0.7272727272727273,
+      "recall": 1.0,
+      "f1-score": 0.8421052631578947,
+      "support": 8.0
+    },
+    "Lãi tiền gửi & Cổ tức": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 3.0
+    },
+    "Chuyển tiền nội bộ giữa các ví": {
+      "precision": 1.0,
+      "recall": 0.8888888888888888,
+      "f1-score": 0.9411764705882353,
+      "support": 9.0
+    },
+    "accuracy": 0.9854368932038835,
+    "macro avg": {
+      "precision": 0.979020979020979,
+      "recall": 0.9752879970271275,
+      "f1-score": 0.974626955431909,
+      "support": 206.0
+    },
+    "weighted avg": {
+      "precision": 0.9894086496028244,
+      "recall": 0.9854368932038835,
+      "f1-score": 0.9861692460387942,
+      "support": 206.0
+    }
+  }
+}

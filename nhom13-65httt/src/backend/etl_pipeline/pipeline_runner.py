@@ -38,6 +38,20 @@ class ETLPipelineRunner:
                         dto.raw_description, dto.counterparty_name, norm_dir, is_internal
                     )
 
+                    # Tích hợp mô hình AI NLP phân loại ngữ cảnh tiếng Việt cho các giao dịch chưa rõ danh mục
+                    if not is_internal and merch_id is None:
+                        try:
+                            from ai_service.category_classifier import get_classifier
+                            ai_pred = get_classifier().predict(
+                                raw_description=dto.raw_description,
+                                counterparty=dto.counterparty_name or "",
+                                direction=norm_dir,
+                            )
+                            if ai_pred.get("confidence", 0.0) >= 0.55:
+                                cat_id = int(ai_pred["category_id"])
+                        except Exception:
+                            pass
+
                     # Kiểm tra khử trùng lặp
                     is_dup, master_id, rule, sim_score = DeduplicationEngine.check_duplicate(
                         db=db,

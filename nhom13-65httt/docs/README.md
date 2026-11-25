@@ -15,6 +15,7 @@ Kho tài liệu này chứa toàn bộ các đặc tả kỹ thuật, kiến tr�
 | **04** | [04_thiet_ke_co_so_du_lieu.md](file:///d:/HTKDTM/project-htkdtm/nhom13-65httt/docs/04_thiet_ke_co_so_du_lieu.md) | - Mô hình ERD Star Schema cho Data Warehouse PostgreSQL.<br>- Chi tiết bảng `fact_transactions` và các bảng `dim_*`.<br>- Bảng kiểm soát khử trùng `log_dedup` và bảng dự báo AI.<br>- Các SQL Views tầng ngữ nghĩa (Semantic Layer) cho Superset. |
 | **05** | [05_ke_hoach_trien_khai.md](file:///d:/HTKDTM/project-htkdtm/nhom13-65httt/docs/05_ke_hoach_trien_khai.md) | - Lộ trình 8 tuần chia theo 5 giai đoạn chi tiết.<br>- Phân công nhiệm vụ chi tiết cho 5 thành viên trong nhóm.<br>- Ma trận phân trách nhiệm RACI.<br>- Kế hoạch quản lý rủi ro và phương án ứng phó. |
 | **06** | [06_huong_dan_chuan_bi_va_van_hanh.md](file:///d:/HTKDTM/project-htkdtm/nhom13-65httt/docs/06_huong_dan_chuan_bi_va_van_hanh.md) | - Hướng dẫn thiết lập môi trường Docker Compose.<br>- Khởi tạo database và nạp dữ liệu mẫu mock data.<br>- Cấu hình Apache Superset và import 3 Dashboards.<br>- Kịch bản kiểm thử tích hợp (End-to-End). |
+| **07** | [07_bao_cao_danh_gia_mo_hinh_ai.md](file:///d:/HTKDTM/project-htkdtm/nhom13-65httt/docs/07_bao_cao_danh_gia_mo_hinh_ai.md) | - Báo cáo đánh giá độ chính xác mô hình NLP phân loại tiếng Việt (F1, Confusion Matrix).<br>- Kết quả phát hiện giao dịch bất thường (Isolation Forest + Z-Score).<br>- Kiểm thử ngược dự báo dòng tiền 30 ngày (MAPE) & phân tích Burn-rate. |
 
 ---
 

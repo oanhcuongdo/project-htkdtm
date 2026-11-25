@@ -1,0 +1,41 @@
+{
+  "model_version": "SARIMAX_ARIMA_v1.0",
+  "run_date": "2026-11-25T01:05:06.483647",
+  "horizon_days": 30,
+  "forecast_start": "2026-11-25",
+  "forecast_end": "2026-12-24",
+  "total_predicted_30d_expense": 24864921.0,
+  "avg_daily_predicted_expense": 828831.0,
+  "persisted_to_db": true,
+  "duration_seconds": 0.37,
+  "evaluation": {
+    "months_available": 10,
+    "backtest_months": 3,
+    "mape_pct": 8.77,
+    "kpi_target_mape_pct": 15.0,
+    "kpi_passed": true,
+    "backtest_details": [
+      {
+        "month": "2026-08",
+        "actual_expense": 18528000.0,
+        "predicted_expense": 18716865.0,
+        "abs_error": 188865.0,
+        "ape_pct": 1.02
+      },
+      {
+        "month": "2026-09",
+        "actual_expense": 22426500.0,
+        "predicted_expense": 18684667.0,
+        "abs_error": 3741833.0,
+        "ape_pct": 16.68
+      },
+      {
+        "month": "2026-10",
+        "actual_expense": 20900500.0,
+        "predicted_expense": 19099066.0,
+        "abs_error": 1801434.0,
+        "ape_pct": 8.62
+      }
+    ]
+  }
+}
