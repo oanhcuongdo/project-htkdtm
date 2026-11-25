@@ -9,6 +9,7 @@ from api.dependencies import get_db_session
 from etl_pipeline.pipeline_runner import ETLPipelineRunner
 from ingestion.email_collector.imap_client import IMAPEmailCollector
 from ingestion.statement_parser import StatementPDFParser, StatementTabularParser
+from notification import WeeklyReportAgent
 
 logger = logging.getLogger(__name__)
 
@@ -74,13 +75,23 @@ def job_daily_ai_refresh():
         logger.error(f"Lỗi khi chạy job_daily_ai_refresh: {exc}")
 
 
+def job_weekly_report():
+    """Tác vụ hằng tuần (Chủ nhật 20:00): tổng hợp và gửi bản tin sức khỏe tài chính qua Telegram."""
+    try:
+        res = WeeklyReportAgent.send_weekly_report()
+        logger.info(f"Weekly report hoàn thành: mode={res.get('delivery', {}).get('mode')}")
+    except Exception as exc:
+        logger.error(f"Lỗi khi chạy job_weekly_report: {exc}")
+
+
 def start_scheduler():
     if not scheduler.running:
         scheduler.add_job(job_poll_emails, "interval", minutes=15, id="email_poll_job", replace_existing=True)
         scheduler.add_job(scan_watch_folder, "interval", minutes=5, id="watch_folder_job", replace_existing=True)
         scheduler.add_job(job_daily_ai_refresh, "cron", hour=2, minute=0, id="daily_ai_job", replace_existing=True)
+        scheduler.add_job(job_weekly_report, "cron", day_of_week="sun", hour=20, minute=0, id="weekly_report_job", replace_existing=True)
         scheduler.start()
-        logger.info("APScheduler đã khởi động: Email (15p), Watch Folder (5p), AI Refresh (02:00 hàng ngày).")
+        logger.info("APScheduler đã khởi động: Email (15p), Watch Folder (5p), AI Refresh (02:00), Weekly Report (CN 20:00).")
 
 
 def stop_scheduler():

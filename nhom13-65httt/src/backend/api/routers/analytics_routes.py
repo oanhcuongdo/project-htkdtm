@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from ai_service.forecasting import BurnRateAnalyzer
 from api.dependencies import get_db
+from notification import WeeklyReportAgent
 
 router = APIRouter(prefix="/api/v1/analytics", tags=["Business Analytics (5 Core Questions)"])
 
@@ -89,3 +90,15 @@ def get_five_core_business_questions(
         },
         "q5_recent_anomalies": [dict(r) for r in anomaly_rows],
     }
+
+
+@router.post("/weekly-report")
+def trigger_weekly_financial_report():
+    """Tạo và gửi bản tin tóm tắt sức khỏe tài chính hàng tuần qua Telegram (hoặc xem trước dry-run)."""
+    return WeeklyReportAgent.send_weekly_report()
+
+
+@router.post("/send-alerts")
+def trigger_anomaly_alerts():
+    """Gửi cảnh báo tức thì các giao dịch bất thường mới nhất qua Telegram (hoặc xem trước dry-run)."""
+    return WeeklyReportAgent.send_anomaly_alerts()

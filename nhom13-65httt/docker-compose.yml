@@ -80,6 +80,7 @@ services:
       SUPERSET_PORT: 8088
     volumes:
       - ./src/frontend/superset/superset_config.py:/app/pythonpath/superset_config.py
+      - ./src/frontend/superset:/app/superset_assets
       - superset_home:/app/superset_home
     depends_on:
       postgres_db:

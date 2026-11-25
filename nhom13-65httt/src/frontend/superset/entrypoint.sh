@@ -27,5 +27,10 @@ with app.app_context():
         security_manager.add_permission_role(public_role, perm)
 " || true
 
+if [ -f /app/superset_assets/provision_superset.py ]; then
+    echo "[*] Auto-provisioning PostgreSQL DW connection, 8 Datasets & 3 Dashboards..."
+    python /app/superset_assets/provision_superset.py || true
+fi
+
 echo "[*] Starting Superset server..."
 exec /app/docker/entrypoints/run-server.sh

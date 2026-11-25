@@ -207,6 +207,8 @@ CREATE INDEX IF NOT EXISTS idx_pipeline_name_status ON pipeline_execution_logs(p
 -- Nhóm: nhom13-65httt
 -- ==========================================================
 
+DROP VIEW IF EXISTS vw_burn_rate_gauge CASCADE;
+DROP VIEW IF EXISTS vw_ai_forecast_combined CASCADE;
 DROP VIEW IF EXISTS vw_cashflow_sankey CASCADE;
 DROP VIEW IF EXISTS vw_anomaly_feed CASCADE;
 DROP VIEW IF EXISTS vw_spending_heatmap CASCADE;
@@ -303,6 +305,7 @@ SELECT
     day_name,
     day_of_week,
     hour,
+    LPAD(hour::TEXT, 2, '0') || 'h' AS hour_label,
     is_weekend,
     COUNT(transaction_id) AS transaction_count,
     SUM(abs_amount) AS total_spending,
@@ -322,6 +325,7 @@ SELECT
     category_name,
     merchant_name,
     amount,
+    abs_amount,
     clean_description,
     anomaly_score,
     source_type,
@@ -331,7 +335,6 @@ WHERE is_anomaly = TRUE;
 
 -- VIEW 6: Luồng tiền Sankey Diagram (Thu nhập -> Các quỹ chi tiêu & Tiết kiệm)
 CREATE VIEW vw_cashflow_sankey AS
--- Bước 1: Thu nhập vào Tổng dòng tiền
 SELECT 
     category_name AS source,
     'Tổng Thu Nhập' AS target,
@@ -342,7 +345,6 @@ GROUP BY category_name
 
 UNION ALL
 
--- Bước 2: Tổng thu nhập phân bổ sang các nhóm chi tiêu chính
 SELECT 
     'Tổng Thu Nhập' AS source,
     parent_category AS target,
@@ -353,7 +355,6 @@ GROUP BY parent_category
 
 UNION ALL
 
--- Bước 3: Các nhóm chi tiêu phân rã vào các danh mục cụ thể
 SELECT 
     parent_category AS source,
     category_name AS target,
@@ -361,6 +362,90 @@ SELECT
 FROM vw_clean_transactions
 WHERE direction = 'EXPENSE'
 GROUP BY parent_category, category_name;
+
+-- VIEW 7: Chuỗi thời gian kết hợp Chi tiêu thực tế + Dự báo AI 30 ngày (Dashboard 3)
+CREATE VIEW vw_ai_forecast_combined AS
+SELECT
+    full_date AS record_date,
+    SUM(abs_amount) AS actual_spending,
+    NULL::NUMERIC(15,2) AS predicted_spending,
+    NULL::NUMERIC(15,2) AS lower_bound,
+    NULL::NUMERIC(15,2) AS upper_bound,
+    'Thực tế' AS series_type
+FROM vw_clean_transactions
+WHERE direction = 'EXPENSE'
+GROUP BY full_date
+
+UNION ALL
+
+SELECT
+    forecast_date AS record_date,
+    NULL::NUMERIC(15,2) AS actual_spending,
+    predicted_amount AS predicted_spending,
+    lower_bound,
+    upper_bound,
+    'Dự báo AI (30 ngày)' AS series_type
+FROM ai_spending_forecast;
+
+-- VIEW 8: Chỉ số Tốc độ đốt ngân sách & Dự phóng số dư tháng hiện tại (Gauge Chart - Dashboard 1 & 3)
+CREATE VIEW vw_burn_rate_gauge AS
+WITH latest_month AS (
+    SELECT year, month, MAX(day) AS days_elapsed
+    FROM vw_clean_transactions
+    GROUP BY year, month
+    ORDER BY year DESC, month DESC
+    LIMIT 1
+),
+mtd AS (
+    SELECT
+        lm.year,
+        lm.month,
+        lm.days_elapsed,
+        COALESCE(SUM(CASE WHEN v.direction = 'INCOME' THEN v.amount ELSE 0 END), 0) AS mtd_income,
+        COALESCE(SUM(CASE WHEN v.direction = 'EXPENSE' THEN v.abs_amount ELSE 0 END), 0) AS mtd_expense
+    FROM latest_month lm
+    JOIN vw_clean_transactions v ON v.year = lm.year AND v.month = lm.month
+    GROUP BY lm.year, lm.month, lm.days_elapsed
+),
+budget AS (
+    SELECT COALESCE(SUM(monthly_budget), 0) AS total_monthly_budget
+    FROM dim_category
+    WHERE category_type = 'EXPENSE'
+),
+fc AS (
+    SELECT
+        COALESCE(SUM(predicted_amount), 0) AS total_30d_forecast,
+        COALESCE(SUM(
+            CASE
+                WHEN EXTRACT(YEAR FROM forecast_date) = (SELECT year FROM latest_month)
+                 AND EXTRACT(MONTH FROM forecast_date) = (SELECT month FROM latest_month)
+                 AND EXTRACT(DAY FROM forecast_date) > (SELECT days_elapsed FROM latest_month)
+                THEN predicted_amount ELSE 0
+            END
+        ), 0) AS remaining_month_forecast
+    FROM ai_spending_forecast
+),
+anom AS (
+    SELECT COUNT(*) AS total_anomalies FROM vw_anomaly_feed
+)
+SELECT
+    TO_DATE(CONCAT(m.year, '-', LPAD(m.month::TEXT, 2, '0'), '-01'), 'YYYY-MM-DD') AS report_month,
+    m.year,
+    m.month,
+    m.days_elapsed,
+    m.mtd_income,
+    m.mtd_expense,
+    b.total_monthly_budget,
+    ROUND(m.mtd_expense * 100.0 / NULLIF(b.total_monthly_budget, 0), 2) AS budget_utilization_pct,
+    ROUND((m.mtd_income - m.mtd_expense) * 100.0 / NULLIF(m.mtd_income, 0), 2) AS mtd_savings_rate_pct,
+    ROUND(m.mtd_expense + f.remaining_month_forecast, 0) AS projected_eom_expense,
+    ROUND(m.mtd_income - (m.mtd_expense + f.remaining_month_forecast), 0) AS projected_eom_balance,
+    ROUND(f.total_30d_forecast, 0) AS total_30d_forecast,
+    a.total_anomalies
+FROM mtd m
+CROSS JOIN budget b
+CROSS JOIN fc f
+CROSS JOIN anom a;
 
 
 -- >>>>> END: nhom13-65httt/src/database/schemas/04_semantic_views.sql <<<<<

@@ -1,0 +1,26 @@
+# Cấu hình Database & 8 Semantic Views cho Apache Superset (Nhóm 13 - 65HTTT)
+database_name: "Personal Finance DW (PostgreSQL)"
+sqlalchemy_uri: "postgresql+psycopg2://finance_user:<PASSWORD>@postgres_db:5432/personal_finance_dw"
+datasets:
+  - table_name: vw_clean_transactions
+    schema: public
+    main_dttm_col: full_date
+  - table_name: vw_monthly_savings_rate
+    schema: public
+    main_dttm_col: report_month
+  - table_name: vw_category_budget_monitoring
+    schema: public
+    main_dttm_col: report_month
+  - table_name: vw_spending_heatmap
+    schema: public
+  - table_name: vw_anomaly_feed
+    schema: public
+    main_dttm_col: full_date
+  - table_name: vw_cashflow_sankey
+    schema: public
+  - table_name: vw_ai_forecast_combined
+    schema: public
+    main_dttm_col: record_date
+  - table_name: vw_burn_rate_gauge
+    schema: public
+    main_dttm_col: report_month
