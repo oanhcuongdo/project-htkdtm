@@ -15,7 +15,10 @@ import psycopg
 _ETL_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(_ETL_DIR / "transform"))
 
+sys.path.insert(0, str(_ETL_DIR))
+
 from cleaning import parse_int, parse_rating, parse_timestamp  # noqa: E402
+from common import canonical_source  # noqa: E402
 
 REQUIRED_COLUMNS = (
     "source", "product", "review_id", "author_hash", "rating", "text", "lang_guess",
@@ -35,7 +38,7 @@ def _row_values(row: dict[str, str]) -> tuple:
 
     rating = parse_rating(row.get("rating"))
     return (
-        text_or_none("source"),
+        canonical_source(text_or_none("source")),
         text_or_none("product"),
         text_or_none("review_id"),
         text_or_none("author_hash"),
