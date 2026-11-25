@@ -1,18 +1,54 @@
+import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
-import { Activity, AlertTriangle, Sparkles } from "lucide-react"
+import { Activity, AlertTriangle, Sparkles, RefreshCw } from "lucide-react"
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 
-import { KpiCard, MockNotice, PageHeading, Panel, formatNumber, toneClass } from "@/components/shared/common"
-import { DATA_AS_OF, kpis, platforms, recommendations, sentimentTrend, sources } from "@/services/mock-data"
+import { KpiCard, PageHeading, Panel, formatNumber, toneClass } from "@/components/shared/common"
+import { DATA_AS_OF, kpis, recommendations, sentimentTrend, sources } from "@/services/mock-data"
+import { fetchPlatforms, type PlatformItem } from "@/services/api"
 
 const GRID = "hsl(var(--border))"
 const TICK = { fontSize: 10, fill: "hsl(var(--muted-foreground))" }
 const SOURCE_COLORS = ["#6366f1", "#818cf8", "#a5b4fc", "#c7d2fe"]
 
 export default function TongQuanPage() {
-  const topPlatforms = [...platforms].sort((a, b) => b.bhi - a.bhi).slice(0, 4)
+  const [platformList, setPlatformList] = useState<PlatformItem[]>([])
+  const [isLiveApi, setIsLiveApi] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  const loadData = () => {
+    setErrorMessage(null)
+    fetchPlatforms()
+      .then((data) => {
+        setPlatformList(data)
+        setIsLiveApi(true)
+      })
+      .catch((err) => {
+        setErrorMessage(
+          err instanceof Error ? err.message : "Không thể kết nối đến máy chủ API."
+        )
+        setIsLiveApi(false)
+      })
+  }
+
+  useEffect(() => {
+    loadData()
+  }, [])
+
+  // Nếu đã kết nối API thật, lấy top 4 từ dữ liệu API
+  const topPlatforms = platformList.length > 0
+    ? [...platformList].sort((a, b) => b.bhiScore - a.bhiScore).slice(0, 4)
+    : [
+        { name: "Duolingo", avgRating: 4.7, sentimentPositiveRatio: 0.88, bhiScore: 89.1 },
+        { name: "Quizlet", avgRating: 4.6, sentimentPositiveRatio: 0.85, bhiScore: 86.3 },
+        { name: "ELSA Speak", avgRating: 4.6, sentimentPositiveRatio: 0.82, bhiScore: 84.5 },
+        { name: "Khan Academy", avgRating: 4.5, sentimentPositiveRatio: 0.81, bhiScore: 82.0 },
+      ]
+
   const priorityTone = [toneClass.negative, toneClass.neutral, toneClass.muted]
-  const totalReviews = sources.reduce((sum, item) => sum + item.reviews, 0)
+  const totalReviews = platformList.length > 0
+    ? platformList.reduce((sum, item) => sum + item.totalReviews, 0)
+    : sources.reduce((sum, item) => sum + item.reviews, 0)
 
   return (
     <>
@@ -20,13 +56,36 @@ export default function TongQuanPage() {
         <PageHeading
           eyebrow="TỔNG QUAN"
           title="Tổng quan trải nghiệm học viên"
-          description="Theo dõi sức khỏe thương hiệu trên 9 nền tảng học trực tuyến."
+          description={`Theo dõi sức khỏe thương hiệu trên ${platformList.length || 9} nền tảng học trực tuyến.`}
         />
         <div className="mb-6 flex items-center gap-2 text-xs text-muted-foreground sm:mb-6">
-          <MockNotice />
+          {isLiveApi ? (
+            <span className="rounded-full bg-emerald-500/10 px-2 py-1 text-[10px] font-semibold text-emerald-600">
+              Dữ liệu API thật
+            </span>
+          ) : (
+            <span className="rounded-full bg-amber-500/10 px-2 py-1 text-[10px] font-semibold text-amber-600">
+              Dữ liệu ngoại tuyến
+            </span>
+          )}
           <span>Cập nhật {DATA_AS_OF}</span>
         </div>
       </div>
+
+      {errorMessage && (
+        <div className="mb-4 flex items-center justify-between rounded-xl border border-destructive/30 bg-destructive/5 p-3.5 text-xs text-destructive">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            <span>{errorMessage} (Hiển thị chế độ ngoại tuyến an toàn)</span>
+          </div>
+          <button
+            onClick={loadData}
+            className="inline-flex items-center gap-1 rounded border border-destructive/20 bg-card px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted cursor-pointer"
+          >
+            <RefreshCw className="h-3 w-3" /> Thử lại
+          </button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {kpis.map((item) => (
@@ -104,10 +163,21 @@ export default function TongQuanPage() {
               <tbody>
                 {topPlatforms.map((p, i) => (
                   <tr key={p.name} className="border-t border-border">
-                    <td className="py-3 font-semibold text-foreground"><span className="mr-2 text-muted-foreground">0{i + 1}</span>{p.name}</td>
-                    <td className="py-3">★ {p.rating}</td>
-                    <td className="py-3"><span className="text-emerald-600">{p.sentiment}%</span></td>
-                    <td className="py-3 text-right"><span className={`rounded-md px-2 py-1 font-semibold ${toneClass.brand}`}>{p.bhi}</span></td>
+                    <td className="py-3 font-semibold text-foreground">
+                      <span className="mr-2 text-muted-foreground">0{i + 1}</span>
+                      {p.name}
+                    </td>
+                    <td className="py-3">★ {p.avgRating}</td>
+                    <td className="py-3">
+                      <span className="text-emerald-600">
+                        {p.sentimentPositiveRatio ? Math.round(p.sentimentPositiveRatio * 100) : 80}%
+                      </span>
+                    </td>
+                    <td className="py-3 text-right">
+                      <span className={`rounded-md px-2 py-1 font-semibold ${toneClass.brand}`}>
+                        {p.bhiScore}
+                      </span>
+                    </td>
                   </tr>
                 ))}
               </tbody>
