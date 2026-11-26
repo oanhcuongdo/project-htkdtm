@@ -1,6 +1,6 @@
 # ERD galaxy schema – EduVision BI (Nhóm 03)
 
-Khớp với `src/database/schema/01_schema_core.sql` và `02_schema_dims_facts.sql`. 6 bảng fact, 7 dimension, dùng chung dimension (galaxy schema).
+Khớp với `src/database/schema/01_schema_core.sql`, `02_schema_dims_facts.sql`, `03_schema_news.sql` và `04_schema_results.sql`. 6 bảng fact, 7 dimension, dùng chung dimension (galaxy schema), thêm bảng bài báo `clean.news_article`, hai bảng nhật ký (`dw.etl_run_log`, `dw.data_quality_log`), bảng nhãn cảm xúc M1 `dw.fact_review_sentiment` và 3 view cho Superset.
 
 ```mermaid
 erDiagram
@@ -8,6 +8,9 @@ erDiagram
     dim_platform ||--o{ fact_review : platform_key
     dim_source ||--o{ fact_review : source_key
     review_text ||--o| fact_review : review_key
+
+    fact_review ||--o| fact_review_sentiment : review_key
+    dim_model ||--o{ fact_review_sentiment : model_key
 
     fact_review ||--o{ fact_review_aspect : review_key
     dim_aspect ||--o{ fact_review_aspect : aspect_key
@@ -95,6 +98,47 @@ erDiagram
         smallint rating
         integer thumbs_up
     }
+    news_article {
+        text article_id PK
+        text platform_name PK
+        text origin
+        text title
+        text outlet
+        text link
+        timestamptz published_at
+        timestamptz collected_at
+    }
+    etl_run_log {
+        bigint log_key PK
+        text run_id
+        text step
+        timestamptz started_at
+        timestamptz finished_at
+        text status
+        text input_name
+        integer rows_read
+        integer rows_inserted
+        integer rows_dropped
+        text error_message
+    }
+    data_quality_log {
+        bigint check_key PK
+        timestamptz checked_at
+        text run_id
+        text source_name
+        text check_type
+        integer rows_checked
+        integer rows_failed
+        text details
+    }
+    fact_review_sentiment {
+        bigint review_key PK, FK
+        smallint model_key FK
+        text sentiment_label
+        numeric sentiment_score
+        numeric confidence
+        timestamptz scored_at
+    }
     fact_review_aspect {
         bigint review_key PK, FK
         smallint aspect_key PK, FK
@@ -153,11 +197,23 @@ erDiagram
 | Fact | Grain |
 |---|---|
 | fact_review | 1 đánh giá |
+| fact_review_sentiment | 1 đánh giá (giữ kết quả M1 mới nhất) |
 | fact_review_aspect | 1 đánh giá × 1 khía cạnh |
 | fact_platform_period | 1 nền tảng × 1 tháng |
 | fact_forecast | 1 nền tảng × 1 kỳ dự báo × 1 mô hình |
 | fact_news_sentiment | 1 bài báo × 1 nền tảng được nhắc |
 | fact_alert | 1 cảnh báo |
+
+## Bảng ngoài galaxy và view
+
+- `clean.news_article` (migration 0003): tiêu đề, tên báo, đường dẫn bài báo; liên kết logic với `fact_news_sentiment` qua `article_id` và với `dim_platform` qua `platform_name`, không có khóa ngoại.
+- `dw.etl_run_log`: mỗi bước của mỗi lần chạy ETL một dòng; `dw.data_quality_log`: mỗi lần kiểm tra chất lượng một đợt dòng. Hai bảng độc lập, không có khóa ngoại.
+
+| View (schema dw) | Nguồn | Ghi chú |
+|---|---|---|
+| v_review_enriched | fact_review, dim_time, dim_platform, dim_source, LEFT JOIN fact_review_sentiment | Một dòng mỗi đánh giá; không có văn bản đánh giá |
+| v_platform_month | fact_platform_period, dim_platform, dim_time | `month_start` là ngày đầu tháng |
+| v_alert_open | fact_alert, dim_platform, dim_time, LEFT JOIN dim_aspect | Chỉ cảnh báo có status khác `da_xu_ly` |
 
 ## Cần xác nhận
 
