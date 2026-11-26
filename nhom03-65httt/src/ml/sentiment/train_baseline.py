@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from common import LABELS, ROOT, label_counts, load_gold, load_train, metrics, split_stratified  # noqa: E402
+from sentiment_common import LABELS, ROOT, label_counts, load_gold, load_train, metrics, split_stratified  # noqa: E402
 
 
 def build_pipeline(C: float = 4.0):

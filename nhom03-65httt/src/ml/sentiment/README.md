@@ -21,7 +21,7 @@ python src/etl/build_platform_period.py --sentiment-source model                
 
 | Tệp | Vai trò |
 |---|---|
-| `common.py` | Đọc dữ liệu gán nhãn, chia train/validation/test (phân tầng, hạt cố định), đo macro-F1 |
+| `sentiment_common.py` | Đọc dữ liệu gán nhãn, chia train/validation/test (phân tầng, hạt cố định), đo macro-F1 |
 | `train_baseline.py` | E1, mô hình nền TF-IDF (từ và ký tự) + Logistic Regression; chọn C trên tập validation |
 | `phobert_model.py` | Tách từ (underthesea), gom lô theo độ dài, dự đoán xác suất |
 | `train_phobert.py` | Tinh chỉnh `vinai/phobert-base-v2`, chọn epoch theo validation, đo test và tập vàng một lần ở cuối |

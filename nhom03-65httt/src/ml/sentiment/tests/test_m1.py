@@ -13,7 +13,7 @@ import pytest
 SENTIMENT_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SENTIMENT_DIR))
 
-import common  # noqa: E402
+import sentiment_common as common  # noqa: E402
 from phobert_model import length_buckets  # noqa: E402
 
 

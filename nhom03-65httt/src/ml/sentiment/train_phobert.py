@@ -20,7 +20,7 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from common import LABELS, ROOT, SEED, label_counts, load_gold, load_train, metrics, split_stratified  # noqa: E402
+from sentiment_common import LABELS, ROOT, SEED, label_counts, load_gold, load_train, metrics, split_stratified  # noqa: E402
 from phobert_model import BASE_MODEL, MAX_LEN, Scorer, length_buckets, save_model, segment  # noqa: E402
 
 

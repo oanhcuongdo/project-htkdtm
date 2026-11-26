@@ -23,7 +23,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from common import LABELS, ROOT  # noqa: E402  (common của ML; ETL cũng có common.py nên nạp bản ETL theo tên riêng)
+from sentiment_common import LABELS, ROOT  # noqa: E402  (common của ML; ETL cũng có common.py nên nạp bản ETL theo tên riêng)
 
 MODEL_NAME, MODEL_VERSION = "M1_phobert", "v0"
 DEFAULT_MODEL_DIR = ROOT / "models" / "m1_phobert_sentiment"
