@@ -20,12 +20,3 @@ def natural_search_placeholder(payload: Dict[str, Any]):
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
         detail="Module Tìm kiếm ngôn ngữ tự nhiên thuộc Gói Chức năng 1.",
     )
-
-
-@router.post("/chatbot/query")
-def chatbot_query_placeholder(payload: Dict[str, Any]):
-    """Điểm chờ Gói 2 (Việt): Chatbot BI Text-to-SQL với Google Gemini."""
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Module Chatbot BI Text-to-SQL thuộc Gói 2 (Việt).",
-    )
