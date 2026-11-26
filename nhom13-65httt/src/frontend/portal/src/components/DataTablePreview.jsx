@@ -50,13 +50,13 @@ export default function DataTablePreview({ tables }) {
         if (!tbl.rows || tbl.rows.length === 0) return null
         const cols = Object.keys(tbl.rows[0])
         return (
-          <div key={idx} className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-            <div className="px-3.5 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-700">
+          <div key={idx} className="rounded-xl border border-boulder-hellamaa bg-boulder-ehakivi overflow-hidden">
+            <div className="px-3.5 py-2 bg-boulder-pahkla border-b border-boulder-hellamaa text-xs font-semibold text-boulder-mustkivi">
               {tbl.title || 'Bảng dữ liệu đối chiếu từ PostgreSQL'}
             </div>
             <div className="overflow-x-auto">
               <table className="min-w-full text-xs">
-                <thead className="bg-slate-100 text-slate-600">
+                <thead className="bg-boulder-pahkla/60 text-boulder-majakivi">
                   <tr>
                     {cols.map((col) => (
                       <th key={col} className="px-3 py-2 text-left font-semibold whitespace-nowrap">
@@ -65,11 +65,20 @@ export default function DataTablePreview({ tables }) {
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-boulder-pahkla">
                   {tbl.rows.map((row, rIdx) => (
-                    <tr key={rIdx} className="hover:bg-indigo-50/40">
+                    <tr key={rIdx} className="hover:bg-estonia-parnu/25 transition-colors">
                       {cols.map((col) => (
-                        <td key={col} className="px-3 py-2 text-slate-800 whitespace-nowrap">
+                        <td
+                          key={col}
+                          className={`px-3 py-2 whitespace-nowrap ${
+                            col.includes('vnd') || col.includes('amount')
+                              ? 'font-semibold text-estonia-blue tabular-nums-vnd'
+                              : col.includes('mask') || col === 'date'
+                              ? 'font-mono text-boulder-majakivi'
+                              : 'text-boulder-mustkivi'
+                          }`}
+                        >
                           {formatCell(col, row[col])}
                         </td>
                       ))}

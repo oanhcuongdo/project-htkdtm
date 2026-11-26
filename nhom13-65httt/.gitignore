@@ -5,3 +5,7 @@ csv/
 .pytest_cache/
 src/backend/docs/
 src/backend/watch_statements/
+
+# Bỏ qua thư mục build & dependencies của Frontend React
+node_modules/
+dist/

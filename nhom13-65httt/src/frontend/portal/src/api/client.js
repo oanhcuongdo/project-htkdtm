@@ -19,7 +19,8 @@ api.interceptors.response.use(
     if (error.response && error.response.status === 401) {
       localStorage.removeItem('pfi_token')
       localStorage.removeItem('pfi_user')
-      if (!window.location.pathname.startsWith('/login')) {
+      const path = window.location.pathname
+      if (path !== '/' && !path.startsWith('/login')) {
         window.location.href = '/login'
       }
     }
