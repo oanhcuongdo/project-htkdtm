@@ -6,23 +6,39 @@ export interface UserSession {
   name: string
   email: string
   role: UserRole
+  username: string
 }
 
 interface AuthContextType {
   user: UserSession | null
+  token: string | null
   role: UserRole | null
   isAuthenticated: boolean
-  login: (email: string, name?: string) => void
-  loginAsAdmin: () => void
-  loginAsViewer: () => void
+  login: (username: string, password: string) => Promise<void>
   logout: () => void
 }
 
 const STORAGE_KEY = "eduvision.session"
+const TOKEN_KEY = "eduvision.token"
+
+export const getAuthToken = (): string | null => {
+  return localStorage.getItem(TOKEN_KEY)
+}
+
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1"
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [token, setToken] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(TOKEN_KEY)
+    } catch {
+      return null
+    }
+  })
+
   const [user, setUser] = useState<UserSession | null>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY)
@@ -33,6 +49,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   })
 
   useEffect(() => {
+    if (token) {
+      localStorage.setItem(TOKEN_KEY, token)
+    } else {
+      localStorage.removeItem(TOKEN_KEY)
+    }
+  }, [token])
+
+  useEffect(() => {
     if (user) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(user))
     } else {
@@ -40,40 +64,69 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [user])
 
-  const login = (email: string, name?: string) => {
-    const trimmedEmail = email.trim()
-    const isAdmin = trimmedEmail.toLowerCase().includes("admin")
-    const role: UserRole = isAdmin ? "admin" : "viewer"
-    const displayName = name?.trim() || (isAdmin ? "Quản trị viên (Admin)" : "Người xem (Viewer)")
-
-    const session: UserSession = {
-      name: displayName,
-      email: trimmedEmail || (isAdmin ? "admin@eduvision.vn" : "viewer@eduvision.vn"),
-      role,
+  const login = async (username: string, password: string): Promise<void> => {
+    const trimmedUsername = username.trim()
+    if (!trimmedUsername || !password) {
+      throw new Error("Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu")
     }
-    setUser(session)
-  }
 
-  const loginAsAdmin = () => {
-    const adminSession: UserSession = {
-      name: "Quản trị viên Demo",
-      email: "admin@eduvision.vn",
-      role: "admin",
-    }
-    setUser(adminSession)
-  }
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: trimmedUsername,
+          password,
+        }),
+      })
 
-  const loginAsViewer = () => {
-    const viewerSession: UserSession = {
-      name: "Người xem Demo",
-      email: "viewer@eduvision.vn",
-      role: "viewer",
+      if (!response.ok) {
+        let errorDetail = "Tên đăng nhập hoặc mật khẩu không chính xác"
+        try {
+          const errorData = await response.json()
+          if (errorData.detail) {
+            errorDetail = errorData.detail
+          }
+        } catch {
+          // Dùng thông báo mặc định nếu không đọc được JSON
+        }
+        throw new Error(errorDetail)
+      }
+
+      const data = await response.json()
+      const rawRole = (data.role || "viewer").toLowerCase()
+      const role: UserRole = rawRole === "admin" ? "admin" : "viewer"
+      const displayName = role === "admin" ? `Quản trị viên (${trimmedUsername})` : `Người xem (${trimmedUsername})`
+
+      const session: UserSession = {
+        name: displayName,
+        email: `${trimmedUsername}@eduvision.vn`,
+        username: trimmedUsername,
+        role,
+      }
+
+      setToken(data.access_token)
+      setUser(session)
+    } catch (err) {
+      if (
+        err instanceof TypeError ||
+        (err instanceof Error && err.message.toLowerCase().includes("failed to fetch"))
+      ) {
+        throw new Error("Không thể kết nối đến máy chủ xác thực")
+      }
+      if (err instanceof Error) {
+        throw err
+      }
+      throw new Error("Không thể kết nối đến máy chủ xác thực")
     }
-    setUser(viewerSession)
   }
 
   const logout = () => {
     localStorage.removeItem(STORAGE_KEY)
+    localStorage.removeItem(TOKEN_KEY)
+    setToken(null)
     setUser(null)
   }
 
@@ -81,11 +134,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <AuthContext.Provider
       value={{
         user,
+        token,
         role: user?.role ?? null,
-        isAuthenticated: !!user,
+        isAuthenticated: !!token && !!user,
         login,
-        loginAsAdmin,
-        loginAsViewer,
         logout,
       }}
     >
