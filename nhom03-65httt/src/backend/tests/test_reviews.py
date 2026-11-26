@@ -72,19 +72,25 @@ def test_invalid_page_returns_422():
 # ============================================================================
 
 
+def _get_test_db_url() -> str:
+    """Lấy URL kết nối CSDL phục vụ test, ưu tiên os.environ['DATABASE_URL'] để tránh bị che mật khẩu."""
+    if os.environ.get("DATABASE_URL"):
+        return os.environ["DATABASE_URL"]
+    settings = get_settings()
+    if settings.database_url:
+        return settings.database_url
+    user = os.getenv("POSTGRES_USER", "eduvision")
+    pwd = os.getenv("POSTGRES_PASSWORD", "eduvision_secret_2026")
+    host = os.getenv("POSTGRES_HOST", "127.0.0.1")
+    port = os.getenv("POSTGRES_PORT", "5432")
+    db = os.getenv("POSTGRES_DB", "eduvision")
+    return f"postgresql://{user}:{pwd}@{host}:{port}/{db}"
+
+
 @pytest.fixture()
 def db_conn() -> Generator[psycopg.Connection, None, None]:
     """Kết nối PostgreSQL phục vụ kiểm thử, hoàn tác toàn bộ thay đổi sau mỗi bài."""
-    settings = get_settings()
-    db_url = settings.database_url or os.getenv("DATABASE_URL")
-    if not db_url:
-        # Thử đọc thông tin cấu hình từ biến môi trường chuẩn của nhóm
-        user = os.getenv("POSTGRES_USER", "eduvision")
-        pwd = os.getenv("POSTGRES_PASSWORD", "eduvision_secret_2026")
-        host = os.getenv("POSTGRES_HOST", "127.0.0.1")
-        port = os.getenv("POSTGRES_PORT", "5432")
-        db = os.getenv("POSTGRES_DB", "eduvision")
-        db_url = f"postgresql://{user}:{pwd}@{host}:{port}/{db}"
+    db_url = _get_test_db_url()
 
     try:
         conn = psycopg.connect(db_url, connect_timeout=2)
@@ -98,10 +104,21 @@ def db_conn() -> Generator[psycopg.Connection, None, None]:
         conn.close()
 
 
+def test_normalize_sentiment_trung_lap():
+    """Đảm bảo các biến thể 'Trung lập', 'trung lap', 'trung tính' đều ánh xạ về 'trung_tinh'."""
+    from app.api.reviews import _normalize_sentiment
+
+    assert _normalize_sentiment("Trung lập") == "trung_tinh"
+    assert _normalize_sentiment("trung lap") == "trung_tinh"
+    assert _normalize_sentiment("Trung tính") == "trung_tinh"
+    assert _normalize_sentiment("Tích cực") == "tich_cuc"
+    assert _normalize_sentiment("Tiêu cực") == "tieu_cuc"
+
+
 def test_sentiment_filter_without_sentiment_table_returns_422(db_conn, monkeypatch):
     """B4: Khi bảng dw.fact_review_sentiment chưa tồn tại, lọc cảm xúc hoặc lệch pha trả 422."""
     settings = get_settings()
-    monkeypatch.setattr(settings, "database_url", db_conn.info.dsn)
+    monkeypatch.setattr(settings, "database_url", _get_test_db_url())
 
     with db_conn.cursor() as cur:
         cur.execute("SELECT to_regclass('dw.fact_review_sentiment') IS NOT NULL")
@@ -119,10 +136,33 @@ def test_sentiment_filter_without_sentiment_table_returns_422(db_conn, monkeypat
         pytest.skip("Bảng dw.fact_review_sentiment đã tồn tại trên CSDL này")
 
 
+def test_sentiment_filter_trung_lap_on_real_db(db_conn, monkeypatch):
+    """Kiểm tra bộ lọc cảm xúc 'Trung lập' (frontend gửi) được ánh xạ đúng và không gây lỗi SQL."""
+    settings = get_settings()
+    monkeypatch.setattr(settings, "database_url", _get_test_db_url())
+
+    with db_conn.cursor() as cur:
+        cur.execute("SELECT to_regclass('dw.fact_review_sentiment') IS NOT NULL")
+        has_table = cur.fetchone()[0]
+
+    if not has_table:
+        pytest.skip("Bảng dw.fact_review_sentiment chưa tồn tại để test lọc cảm xúc")
+
+    res = client.get("/api/v1/reviews?sentiment=Trung+lập&page=1&page_size=10")
+    assert res.status_code == 200
+    data = res.json()
+    assert "total" in data
+    assert "items" in data
+    assert isinstance(data["items"], list)
+    for item in data["items"]:
+        if item.get("sentiment"):
+            assert item["sentiment"] == "Trung lập"
+
+
 def test_list_reviews_real_db_default_and_privacy(db_conn, monkeypatch):
     """HA2.4 & HA2.6: Lấy danh sách thật từ CSDL và đảm bảo không lộ thông tin cá nhân."""
     settings = get_settings()
-    monkeypatch.setattr(settings, "database_url", db_conn.info.dsn)
+    monkeypatch.setattr(settings, "database_url", _get_test_db_url())
 
     res = client.get("/api/v1/reviews?page=1&page_size=10")
     assert res.status_code == 200
@@ -144,7 +184,7 @@ def test_list_reviews_real_db_default_and_privacy(db_conn, monkeypatch):
 def test_keyword_escape_wildcards(db_conn, monkeypatch):
     """B3: Kiểm tra cơ chế thoát ký tự đại diện % và _ trong từ khóa."""
     settings = get_settings()
-    monkeypatch.setattr(settings, "database_url", db_conn.info.dsn)
+    monkeypatch.setattr(settings, "database_url", _get_test_db_url())
 
     # Tìm kiếm với ký tự % (ví dụ 100%) không được biến thành wildcard so khớp toàn bộ
     res_pct = client.get("/api/v1/reviews?keyword=100%")
@@ -166,7 +206,7 @@ def test_keyword_escape_wildcards(db_conn, monkeypatch):
 def test_list_reviews_page_out_of_range_returns_empty(db_conn, monkeypatch):
     """HA2.5: Trang vượt quá tổng số trang trả về danh sách rỗng, không sập 500."""
     settings = get_settings()
-    monkeypatch.setattr(settings, "database_url", db_conn.info.dsn)
+    monkeypatch.setattr(settings, "database_url", _get_test_db_url())
 
     res = client.get("/api/v1/reviews?page=999999")
     assert res.status_code == 200
@@ -178,7 +218,7 @@ def test_list_reviews_page_out_of_range_returns_empty(db_conn, monkeypatch):
 def test_get_single_review_not_found(db_conn, monkeypatch):
     """Đánh giá không tồn tại trả về 404."""
     settings = get_settings()
-    monkeypatch.setattr(settings, "database_url", db_conn.info.dsn)
+    monkeypatch.setattr(settings, "database_url", _get_test_db_url())
 
     res = client.get("/api/v1/reviews/999999999")
     assert res.status_code == 404

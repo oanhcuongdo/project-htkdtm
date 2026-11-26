@@ -60,12 +60,17 @@ def _normalize_sentiment(s: str) -> str:
     cleaned = s.strip().lower()
     mapping = {
         "tích cực": "tich_cuc",
+        "tich cuc": "tich_cuc",
         "tich_cuc": "tich_cuc",
         "positive": "tich_cuc",
         "tiêu cực": "tieu_cuc",
+        "tieu cuc": "tieu_cuc",
         "tieu_cuc": "tieu_cuc",
         "negative": "tieu_cuc",
         "trung tính": "trung_tinh",
+        "trung tinh": "trung_tinh",
+        "trung lập": "trung_tinh",
+        "trung lap": "trung_tinh",
         "trung_tinh": "trung_tinh",
         "neutral": "trung_tinh",
     }
@@ -77,11 +82,11 @@ def _format_sentiment_display(label: str | None) -> str | None:
     if not label:
         return None
     cleaned = label.strip().lower()
-    if cleaned in ("tich_cuc", "positive", "tích cực"):
+    if cleaned in ("tich_cuc", "positive", "tích cực", "tich cuc"):
         return "Tích cực"
-    if cleaned in ("tieu_cuc", "negative", "tiêu cực"):
+    if cleaned in ("tieu_cuc", "negative", "tiêu cực", "tieu cuc"):
         return "Tiêu cực"
-    if cleaned in ("trung_tinh", "neutral", "trung tính"):
+    if cleaned in ("trung_tinh", "neutral", "trung tính", "trung tinh", "trung lập", "trung lap"):
         return "Trung lập"
     return label
 

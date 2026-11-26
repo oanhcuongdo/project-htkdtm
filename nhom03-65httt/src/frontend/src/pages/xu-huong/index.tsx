@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react"
-import { ArrowDownRight } from "lucide-react"
+import { AlertTriangle, ArrowDownRight } from "lucide-react"
 import { Area, Bar, BarChart, CartesianGrid, Cell, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 
 import { MockNotice, PageHeading, Panel, SelectControl } from "@/components/shared/common"
@@ -110,6 +110,11 @@ export default function XuHuongPage() {
 
   return (
     <>
+      <div className="mb-4 flex items-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/10 px-4 py-2.5 text-xs text-amber-700 dark:text-amber-400">
+        <AlertTriangle className="size-4 shrink-0" />
+        <span>Dữ liệu minh họa</span>
+      </div>
+
       <PageHeading eyebrow="TÍN HIỆU THỊ TRƯỜNG" title="Xu hướng & dự báo" description="Theo dõi diễn biến theo tháng, dự báo tháng kế tiếp theo từng nền tảng và so sánh với mô hình nền." />
 
       <Panel title="Xu hướng và dự báo theo tháng" subtitle="Mô hình M3 (LightGBM) · dự báo ngắn hạn 1–3 tháng" action={<MockNotice />}>
