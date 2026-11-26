@@ -23,6 +23,18 @@ SOURCE_TYPES = {
 }
 
 
+# Bí danh tên nguồn: collector App Store mới ghi `app_store`, dữ liệu lịch sử dùng `app_store_vn`
+# (cùng cửa hàng Việt Nam). Gộp về một tên để khóa (source, review_id) loại trùng đúng.
+SOURCE_ALIASES = {"app_store": "app_store_vn"}
+
+
+def canonical_source(name: str | None) -> str | None:
+    if name is None:
+        return None
+    name = name.strip()
+    return SOURCE_ALIASES.get(name, name)
+
+
 def project_root() -> Path:
     """Thư mục nhom03-65httt (chứa config/platforms.yml)."""
     for parent in Path(__file__).resolve().parents:
