@@ -1,21 +1,83 @@
 /**
- * EduVision BI - Dịch vụ API giả lập (Mock API Service)
+ * EduVision BI - Dịch vụ API kết nối Backend FastAPI (EduVision BI, Nhóm 03).
  *
- * GHI CHÚ: Các hàm hiện tại trả về dữ liệu mẫu có độ trễ 300-600ms mô phỏng mạng.
- * TODO: Sẽ được thay thế bằng các lệnh gọi REST API đến backend FastAPI sau khi hoàn thiện.
+ * HA2: Kết nối API thật (FastAPI) cho tìm kiếm, lọc và phân trang đánh giá.
+ * URL cấu hình duy nhất từ biến môi trường Vite VITE_API_BASE_URL.
  */
 
-// Tiền tố API nếu có (lấy từ biến môi trường)
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1"
+export const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1"
 
-// Hàm tạo độ trễ ngẫu nhiên từ 300ms đến 600ms
-const simulateLatency = <T>(data: T, minMs = 300, maxMs = 600): Promise<T> => {
-  const latency = Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs
-  return new Promise((resolve) => setTimeout(() => resolve(data), latency))
+/**
+ * Lấy Bearer token từ localStorage nếu người dùng đã đăng nhập.
+ */
+function getAuthHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  }
+  try {
+    const token = localStorage.getItem("eduvision.token")
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`
+    }
+  } catch {
+    // Không truy cập được localStorage
+  }
+  return headers
+}
+
+/**
+ * Hàm gọi API tổng quát, xử lý lỗi mạng và trả thông báo tiếng Việt thân thiện (HA2.3).
+ * Tự động chuyển hướng về trang /login và xóa session khi gặp lỗi 401 Unauthorized (B7).
+ */
+async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  const url = `${API_BASE_URL}${endpoint}`
+  const headers = {
+    ...getAuthHeaders(),
+    ...(options.headers as Record<string, string> | undefined),
+  }
+
+  let response: Response
+  try {
+    response = await fetch(url, { ...options, headers })
+  } catch {
+    throw new Error(
+      `Không thể kết nối đến máy chủ API (${API_BASE_URL}). Vui lòng kiểm tra lại dịch vụ backend.`
+    )
+  }
+
+  // B7: Xử lý 401 Unauthorized
+  if (response.status === 401) {
+    try {
+      localStorage.removeItem("eduvision.token")
+      localStorage.removeItem("eduvision.session")
+    } catch {
+      // Bỏ qua lỗi truy cập storage
+    }
+    if (typeof window !== "undefined" && window.location.pathname !== "/login") {
+      window.location.href = "/login"
+    }
+    throw new Error("Phiên đăng nhập đã hết hạn hoặc không hợp lệ. Vui lòng đăng nhập lại.")
+  }
+
+  if (!response.ok) {
+    let errorDetail = `Lỗi yêu cầu máy chủ: mã trạng thái ${response.status}`
+    try {
+      const data = await response.json()
+      if (data.detail) {
+        errorDetail = typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail)
+      }
+    } catch {
+      // Giữ thông báo mã trạng thái mặc định
+    }
+    throw new Error(errorDetail)
+  }
+
+  return response.json() as Promise<T>
 }
 
 // ============================================================================
-// Các kiểu dữ liệu TypeScript (DTO)
+// Các kiểu dữ liệu DTO
 // ============================================================================
 
 export interface PlatformItem {
@@ -23,158 +85,122 @@ export interface PlatformItem {
   name: string
   code: string
   category: "domestic" | "international"
-  totalReviews: number
-  avgRating: number
-  bhiScore: number // Brand Health Index (0 - 100)
-  sentimentPositiveRatio: number
+  groupName: string // "Trong nước" hoặc "Quốc tế"
 }
 
-export interface AspectScore {
-  aspectId: string
-  aspectName: string
-  description: string
-  positiveRatio: number
-  neutralRatio: number
-  negativeRatio: number
-  score: number
+export interface ReviewItem {
+  review_key: number
+  review_id: string
+  platform: string
+  source: string
+  rating: number | null
+  created_at: string | null
+  text: string | null
+  sentiment: string | null // "Tích cực", "Trung lập", "Tiêu cực", hoặc null nếu chưa có nhãn
+  sentiment_score: number | null
+  aspect: string | null
+  aspects: string[]
+  misaligned: boolean
 }
 
-export interface BhiOverview {
-  overallBhi: number
-  trendDelta: number // Tăng giảm so với tháng trước
-  totalReviewsProcessed: number
-  lastUpdated: string
-  topPlatform: string
+export interface ReviewsResponse {
+  total: number
+  page: number
+  page_size: number
+  total_pages: number
+  items: ReviewItem[]
 }
 
-export interface AlertItem {
-  id: string
-  platformCode: string
-  platformName: string
-  aspect: string
-  department: "Đào tạo" | "Sản phẩm" | "Marketing" | "CSKH"
-  severity: "high" | "medium" | "low"
-  message: string
-  suggestedAction: string
-  createdAt: string
-  resolved: boolean
-}
-
-export interface TrendForecastItem {
-  period: string
-  platformCode: string
-  actualSentimentScore?: number
-  forecastSentimentScore: number
-  confidenceLower: number
-  confidenceUpper: number
+export interface ReviewFilterParams {
+  platform?: string
+  start_date?: string
+  end_date?: string
+  sentiment?: string
+  aspect?: string
+  keyword?: string
+  rating?: number
+  misaligned_only?: boolean
+  source?: string
+  page?: number
+  page_size?: number
 }
 
 // ============================================================================
-// Các hàm gọi API (Mock)
+// Các hàm API thật (HA2)
 // ============================================================================
 
 /**
- * Lấy danh sách 9 nền tảng E-learning
- * TODO: thay bằng gọi FastAPI sau: GET /platforms
+ * Lấy danh sách 9 nền tảng E-learning từ GET /api/v1/platforms (từ tệp cấu hình chuẩn platforms.yml)
  */
 export async function fetchPlatforms(): Promise<PlatformItem[]> {
-  const mockPlatforms: PlatformItem[] = [
-    { id: "1", name: "ELSA Speak", code: "elsa", category: "domestic", totalReviews: 4200, avgRating: 4.6, bhiScore: 84.5, sentimentPositiveRatio: 0.82 },
-    { id: "2", name: "Vuihoc", code: "vuihoc", category: "domestic", totalReviews: 2800, avgRating: 4.4, bhiScore: 78.2, sentimentPositiveRatio: 0.76 },
-    { id: "3", name: "Monkey Junior", code: "monkey", category: "domestic", totalReviews: 1950, avgRating: 4.1, bhiScore: 71.0, sentimentPositiveRatio: 0.69 },
-    { id: "4", name: "HOCMAI", code: "hocmai", category: "domestic", totalReviews: 1600, avgRating: 4.0, bhiScore: 68.4, sentimentPositiveRatio: 0.65 },
-    { id: "5", name: "Duolingo", code: "duolingo", category: "international", totalReviews: 3600, avgRating: 4.7, bhiScore: 89.1, sentimentPositiveRatio: 0.88 },
-    { id: "6", name: "Busuu", code: "busuu", category: "international", totalReviews: 850, avgRating: 4.3, bhiScore: 75.8, sentimentPositiveRatio: 0.74 },
-    { id: "7", name: "Khan Academy", code: "khan", category: "international", totalReviews: 720, avgRating: 4.5, bhiScore: 82.0, sentimentPositiveRatio: 0.81 },
-    { id: "8", name: "Memrise", code: "memrise", category: "international", totalReviews: 640, avgRating: 4.2, bhiScore: 73.5, sentimentPositiveRatio: 0.70 },
-    { id: "9", name: "Quizlet", code: "quizlet", category: "international", totalReviews: 1250, avgRating: 4.6, bhiScore: 86.3, sentimentPositiveRatio: 0.85 },
-  ]
-  return simulateLatency(mockPlatforms)
-}
-
-/**
- * Lấy thông tin tổng quan chỉ số BHI
- * TODO: thay bằng gọi FastAPI sau: GET /metrics/bhi-overview
- */
-export async function fetchBhiOverview(): Promise<BhiOverview> {
-  const mockBhi: BhiOverview = {
-    overallBhi: 78.7,
-    trendDelta: +2.4,
-    totalReviewsProcessed: 17610,
-    lastUpdated: new Date().toISOString(),
-    topPlatform: "Duolingo",
+  interface RawPlatform {
+    id: string
+    group: string
+    play_id?: string | null
+    ios_id?: string | null
   }
-  return simulateLatency(mockBhi)
+
+  const raw = await fetchApi<RawPlatform[]>("/platforms")
+  return raw.map((item, idx) => {
+    const isDomestic = item.group === "trong_nuoc"
+    return {
+      id: String(idx + 1),
+      name: item.id,
+      code: item.id,
+      category: isDomestic ? "domestic" : "international",
+      groupName: isDomestic ? "Trong nước" : "Quốc tế",
+    }
+  })
 }
 
 /**
- * Lấy danh sách điểm số theo 4 khía cạnh trải nghiệm (ABSA)
- * TODO: thay bằng gọi FastAPI sau: GET /aspects/summary
+ * Tìm kiếm và lọc đánh giá từ GET /api/v1/reviews (HA2.4, HA2.5, HA2.6)
  */
-export async function fetchAspectScores(): Promise<AspectScore[]> {
-  const mockAspects: AspectScore[] = [
-    { aspectId: "content", aspectName: "Nội dung khóa học", description: "Chất lượng bài giảng, sự đa dạng của lộ trình học", positiveRatio: 0.78, neutralRatio: 0.12, negativeRatio: 0.10, score: 8.2 },
-    { aspectId: "uiux", aspectName: "Giao diện & Trải nghiệm (UI/UX)", description: "Độ mượt mà, tính dễ dùng và thẩm mỹ ứng dụng", positiveRatio: 0.81, neutralRatio: 0.11, negativeRatio: 0.08, score: 8.5 },
-    { aspectId: "pricing", aspectName: "Học phí & Giá trị", description: "Mức giá so với chất lượng nhận được, chính sách hoàn tiền", positiveRatio: 0.62, neutralRatio: 0.18, negativeRatio: 0.20, score: 6.8 },
-    { aspectId: "support", aspectName: "Hỗ trợ & Ổn định kỹ thuật", description: "Tốc độ xử lý lỗi, CSKH, độ ổn định đường truyền server", positiveRatio: 0.68, neutralRatio: 0.14, negativeRatio: 0.18, score: 7.1 },
-  ]
-  return simulateLatency(mockAspects)
+export async function fetchReviews(params: ReviewFilterParams = {}): Promise<ReviewsResponse> {
+  const query = new URLSearchParams()
+
+  if (params.platform && params.platform !== "Tất cả nền tảng") {
+    query.set("platform", params.platform)
+  }
+  if (params.source && params.source !== "Tất cả nguồn") {
+    query.set("source", params.source)
+  }
+  if (params.sentiment && params.sentiment !== "Tất cả cảm xúc") {
+    query.set("sentiment", params.sentiment)
+  }
+  if (params.aspect && params.aspect !== "Tất cả khía cạnh") {
+    query.set("aspect", params.aspect)
+  }
+  if (params.keyword?.trim()) {
+    query.set("keyword", params.keyword.trim())
+  }
+  if (params.rating) {
+    query.set("rating", String(params.rating))
+  }
+  if (params.misaligned_only) {
+    query.set("misaligned_only", "true")
+  }
+  if (params.start_date) {
+    query.set("start_date", params.start_date)
+  }
+  if (params.end_date) {
+    query.set("end_date", params.end_date)
+  }
+  if (params.page) {
+    query.set("page", String(params.page))
+  }
+  if (params.page_size) {
+    query.set("page_size", String(params.page_size))
+  }
+
+  const queryString = query.toString()
+  const endpoint = `/reviews${queryString ? `?${queryString}` : ""}`
+  return fetchApi<ReviewsResponse>(endpoint)
 }
 
 /**
- * Lấy danh sách cảnh báo tự động sinh từ mô hình AI
- * TODO: thay bằng gọi FastAPI sau: GET /alerts
+ * Lấy chi tiết một đánh giá theo khóa review_key từ GET /api/v1/reviews/{review_key}
  */
-export async function fetchAlerts(): Promise<AlertItem[]> {
-  const mockAlerts: AlertItem[] = [
-    {
-      id: "alt-01",
-      platformCode: "vuihoc",
-      platformName: "Vuihoc",
-      aspect: "Học phí & Giá trị",
-      department: "Marketing",
-      severity: "high",
-      message: "Tỷ lệ phàn nàn về chính sách tự động gia hạn tăng 18% trong 14 ngày qua.",
-      suggestedAction: "Rà soát lại thông báo trước khi gia hạn thuê bao và hướng dẫn hủy gói rõ ràng trên app.",
-      createdAt: "2026-11-20T08:30:00Z",
-      resolved: false,
-    },
-    {
-      id: "alt-02",
-      platformCode: "hocmai",
-      platformName: "HOCMAI",
-      aspect: "Hỗ trợ & Ổn định kỹ thuật",
-      department: "Sản phẩm",
-      severity: "medium",
-      message: "Lỗi tải video bài giảng trên phiên bản Android mới nhất ghi nhận 25 đánh giá 1 sao.",
-      suggestedAction: "Kiểm tra CDN và cập nhật bản vá hotfix cho bộ giải mã video trên Android.",
-      createdAt: "2026-11-19T14:15:00Z",
-      resolved: false,
-    },
-    {
-      id: "alt-03",
-      platformCode: "elsa",
-      platformName: "ELSA Speak",
-      aspect: "Nội dung khóa học",
-      department: "Đào tạo",
-      severity: "low",
-      message: "Học viên yêu cầu bổ sung thêm bài học ngữ cảnh chuyên ngành y khoa và tài chính.",
-      suggestedAction: "Chuyển danh sách chủ đề đề xuất cho ban biên soạn nội dung kỳ tới.",
-      createdAt: "2026-11-18T10:00:00Z",
-      resolved: true,
-    },
-  ]
-  return simulateLatency(mockAlerts)
-}
-
-/**
- * Kích hoạt cập nhật dữ liệu ETL (chỉ dành cho Quản trị viên)
- * TODO: thay bằng gọi FastAPI sau: POST /admin/trigger-etl
- */
-export async function triggerDataUpdate(): Promise<{ success: boolean; message: string; runId: string }> {
-  return simulateLatency({
-    success: true,
-    message: "Đã kích hoạt tiến trình thu thập và ETL nền thành công.",
-    runId: `run-${Date.now()}`,
-  }, 500, 800)
+export async function fetchReviewByKey(reviewKey: number): Promise<ReviewItem> {
+  return fetchApi<ReviewItem>(`/reviews/${reviewKey}`)
 }

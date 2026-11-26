@@ -3,7 +3,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, health, platforms, predict
+from app.api import auth, health, platforms, predict, reviews
 from app.core.config import get_settings
 
 
@@ -24,6 +24,7 @@ def create_app() -> FastAPI:
     app.include_router(platforms.router)
     app.include_router(predict.router)
     app.include_router(auth.router)
+    app.include_router(reviews.router)
     return app
 
 

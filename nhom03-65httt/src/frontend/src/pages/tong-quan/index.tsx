@@ -2,7 +2,7 @@ import { Link } from "react-router-dom"
 import { Activity, AlertTriangle, Sparkles } from "lucide-react"
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 
-import { KpiCard, MockNotice, PageHeading, Panel, formatNumber, toneClass } from "@/components/shared/common"
+import { KpiCard, PageHeading, Panel, formatNumber, toneClass } from "@/components/shared/common"
 import { DATA_AS_OF, kpis, platforms, recommendations, sentimentTrend, sources } from "@/services/mock-data"
 
 const GRID = "hsl(var(--border))"
@@ -16,6 +16,11 @@ export default function TongQuanPage() {
 
   return (
     <>
+      <div className="mb-4 flex items-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/10 px-4 py-2.5 text-xs text-amber-700 dark:text-amber-400">
+        <AlertTriangle className="size-4 shrink-0" />
+        <span>Dữ liệu minh họa, chưa nối API KPI</span>
+      </div>
+
       <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
         <PageHeading
           eyebrow="TỔNG QUAN"
@@ -23,7 +28,9 @@ export default function TongQuanPage() {
           description="Theo dõi sức khỏe thương hiệu trên 9 nền tảng học trực tuyến."
         />
         <div className="mb-6 flex items-center gap-2 text-xs text-muted-foreground sm:mb-6">
-          <MockNotice />
+          <span className="rounded-full bg-amber-500/10 px-2 py-1 text-[10px] font-semibold text-amber-600">
+            Dữ liệu minh họa
+          </span>
           <span>Cập nhật {DATA_AS_OF}</span>
         </div>
       </div>
@@ -104,10 +111,19 @@ export default function TongQuanPage() {
               <tbody>
                 {topPlatforms.map((p, i) => (
                   <tr key={p.name} className="border-t border-border">
-                    <td className="py-3 font-semibold text-foreground"><span className="mr-2 text-muted-foreground">0{i + 1}</span>{p.name}</td>
+                    <td className="py-3 font-semibold text-foreground">
+                      <span className="mr-2 text-muted-foreground">0{i + 1}</span>
+                      {p.name}
+                    </td>
                     <td className="py-3">★ {p.rating}</td>
-                    <td className="py-3"><span className="text-emerald-600">{p.sentiment}%</span></td>
-                    <td className="py-3 text-right"><span className={`rounded-md px-2 py-1 font-semibold ${toneClass.brand}`}>{p.bhi}</span></td>
+                    <td className="py-3">
+                      <span className="text-emerald-600">{p.sentiment}%</span>
+                    </td>
+                    <td className="py-3 text-right">
+                      <span className={`rounded-md px-2 py-1 font-semibold ${toneClass.brand}`}>
+                        {p.bhi}
+                      </span>
+                    </td>
                   </tr>
                 ))}
               </tbody>

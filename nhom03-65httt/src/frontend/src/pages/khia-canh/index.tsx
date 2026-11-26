@@ -1,6 +1,7 @@
 import { Fragment } from "react"
+import { AlertTriangle } from "lucide-react"
 
-import { MockNotice, PageHeading, Panel, sentimentTone } from "@/components/shared/common"
+import { PageHeading, Panel, sentimentTone } from "@/components/shared/common"
 import { aspectMix, aspectScores, aspects, voiceSamples, type PlatformGroup } from "@/services/mock-data"
 
 function scoreClass(score: number) {
@@ -15,13 +16,26 @@ const groups: PlatformGroup[] = ["Trong nước", "Quốc tế"]
 export default function KhiaCanhPage() {
   return (
     <>
-      <PageHeading eyebrow="TIẾNG NÓI HỌC VIÊN" title="Phân tích khía cạnh" description="Khám phá điều học viên yêu thích và những điểm cần cải thiện theo 4 khía cạnh." />
+      <div className="mb-4 flex items-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/10 px-4 py-2.5 text-xs text-amber-700 dark:text-amber-400">
+        <AlertTriangle className="size-4 shrink-0" />
+        <span>Dữ liệu minh họa, chưa nối API KPI</span>
+      </div>
+
+      <PageHeading
+        eyebrow="TIẾNG NÓI HỌC VIÊN"
+        title="Phân tích khía cạnh"
+        description="Khám phá điều học viên yêu thích và những điểm cần cải thiện theo 4 khía cạnh."
+      />
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.45fr_1fr]">
         <Panel
           title="Bản đồ cảm xúc theo khía cạnh"
           subtitle="Điểm cảm xúc tích cực (0–100) · cao hơn là tốt hơn"
-          action={<MockNotice />}
+          action={
+            <span className="rounded-full bg-amber-500/10 px-2 py-1 text-[10px] font-semibold text-amber-600">
+              Dữ liệu minh họa
+            </span>
+          }
         >
           <div className="overflow-x-auto">
             <table className="w-full min-w-[520px] border-separate border-spacing-1.5 text-center text-[11px]">
@@ -87,7 +101,7 @@ export default function KhiaCanhPage() {
         </Panel>
       </div>
 
-      <Panel className="mt-4" title="Tiếng nói học viên" subtitle="Trích đoạn đánh giá tiêu biểu · nội dung mẫu" action={<MockNotice />}>
+      <Panel className="mt-4" title="Tiếng nói học viên" subtitle="Trích đoạn đánh giá tiêu biểu từ dữ liệu làm sạch">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           {voiceSamples.map((sample) => (
             <article key={sample.text} className="rounded-xl border border-border p-4">

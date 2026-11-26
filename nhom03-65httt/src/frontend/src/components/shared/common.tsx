@@ -55,7 +55,7 @@ export function SelectControl({
   label: string
   value: string
   onChange: (value: string) => void
-  options: string[]
+  options: (string | { label: string; value: string })[]
 }) {
   return (
     <label className="flex flex-col gap-1.5 text-[10px] font-medium text-muted-foreground">
@@ -65,11 +65,15 @@ export function SelectControl({
         onChange={(event) => onChange(event.target.value)}
         className="min-w-32 rounded-lg border border-border bg-background px-3 py-2 text-xs text-foreground outline-none focus:border-indigo-400"
       >
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
+        {options.map((opt) => {
+          const optValue = typeof opt === "string" ? opt : opt.value
+          const optLabel = typeof opt === "string" ? opt : opt.label
+          return (
+            <option key={optValue} value={optValue}>
+              {optLabel}
+            </option>
+          )
+        })}
       </select>
     </label>
   )
