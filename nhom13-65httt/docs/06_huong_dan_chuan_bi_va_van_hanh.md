@@ -62,7 +62,13 @@ IMAP_EMAIL=your_email@gmail.com
 IMAP_APP_PASSWORD=your_gmail_app_password
 TELEGRAM_BOT_TOKEN=your_telegram_bot_token_from_botfather
 TELEGRAM_CHAT_ID=your_chat_id
+TELEGRAM_USER_ID=1
 ```
+
+`TELEGRAM_CHAT_ID` là chat Telegram duy nhất được phép gửi ảnh; `TELEGRAM_USER_ID`
+là `user_id` trong bảng `users` nhận giao dịch (mặc định tài khoản demo `1`).
+Không để trống `TELEGRAM_CHAT_ID` khi bật bot. Tạo bot qua `@BotFather`, gửi
+`/start` cho bot và lấy chat ID cá nhân bằng bot lấy thông tin chat của bạn.
 
 ---
 
@@ -84,16 +90,51 @@ Hệ thống sẽ tự động tải image và dựng các container:
 Khi PostgreSQL khởi chạy lần đầu, chạy script tạo bảng và nạp dữ liệu mẫu:
 ```bash
 # Nạp Schema Staging, Star Schema và Views
-docker exec -i postgres_db psql -U finance_user -d personal_finance_dw < src/database/schemas/01_staging.sql
-docker exec -i postgres_db psql -U finance_user -d personal_finance_dw < src/database/schemas/02_warehouse_star_schema.sql
-docker exec -i postgres_db psql -U finance_user -d personal_finance_dw < src/database/schemas/03_dedup_and_logs.sql
-docker exec -i postgres_db psql -U finance_user -d personal_finance_dw < src/database/schemas/04_semantic_views.sql
+docker exec -i htkdtm_postgres psql -U finance_user -d personal_finance_dw < src/database/schemas/01_staging.sql
+docker exec -i htkdtm_postgres psql -U finance_user -d personal_finance_dw < src/database/schemas/02_warehouse_star_schema.sql
+docker exec -i htkdtm_postgres psql -U finance_user -d personal_finance_dw < src/database/schemas/03_dedup_and_logs.sql
+docker exec -i htkdtm_postgres psql -U finance_user -d personal_finance_dw < src/database/schemas/05_multi_user_and_chat.sql
+docker exec -i htkdtm_postgres psql -U finance_user -d personal_finance_dw < src/database/schemas/04_semantic_views.sql
 
 # Sinh và nạp 500-1000 giao dịch giả lập phục vụ kiểm thử
 python src/database/mock_data/generate_mock_data.py
 ```
 
-### 4.3. Khởi tạo tài khoản Quản trị Apache Superset
+> Cơ sở dữ liệu được tạo mới qua `docker-compose up` đã chạy `init_database.sql`
+> và không cần nạp lại các schema trên. Với database đã tồn tại, chạy các lệnh
+> schema để bổ sung chỉ mục staging duy nhất cho `telegram_file_id` và chỉ mục
+> truy vấn khử trùng. Nếu PostgreSQL báo trùng `telegram_file_id`, hãy kiểm tra
+> các dòng staging lặp trước khi tạo chỉ mục.
+
+### 4.3. Chạy Telegram Bot nhận ảnh biên lai
+
+1. Điền `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` và `TELEGRAM_USER_ID` trong
+   `.env`. Chat ID được giới hạn trong bot; các chat khác sẽ bị bỏ qua.
+2. Khởi chạy riêng bot cùng PostgreSQL và backend:
+   ```bash
+   docker-compose --profile telegram up -d --build postgres_db backend telegram_bot
+   docker-compose logs -f telegram_bot
+   ```
+3. Gửi ảnh biên lai qua Telegram. Bot lưu OCR vào `stg_raw_receipts`, chuẩn hóa
+   thời gian theo UTC+07:00, lưu chi tiêu VND dạng số âm, chạy ETL và xác nhận
+   kết quả. Gửi lại cùng Telegram file ID sẽ không tạo bản ghi staging hoặc
+   giao dịch mới; ảnh khác có cùng số tiền, nội dung và thời điểm ±10 phút sẽ
+   được pipeline ghi nhận trong `log_dedup`.
+4. Kiểm tra API staging/log ở `GET /api/v1/ingestion/logs` hoặc Swagger
+   `http://localhost:8000/docs`. Có thể thử parser mà chưa cần Telegram bằng
+   `POST /api/v1/ingestion/ingest-receipt-text` với JSON:
+   ```json
+   {
+     "ocr_text": "HIGHLANDS COFFEE\n23/11/2026 09:15:00\nPhin Sua Da (L) 55,000\nTong tien: 55,000 VND",
+     "chat_id": 12345
+   }
+   ```
+
+Để dừng bot: `docker-compose stop telegram_bot`. Không chạy bot polling trong
+tiến trình FastAPI; service bot riêng tránh chặn API và tránh khởi chạy nhiều
+poller khi backend scale ngang.
+
+### 4.4. Khởi tạo tài khoản Quản trị Apache Superset
 ```bash
 # Tạo user admin cho Superset
 docker exec -it superset_app superset fab create-admin \
