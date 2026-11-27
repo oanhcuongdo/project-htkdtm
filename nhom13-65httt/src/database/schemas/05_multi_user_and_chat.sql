@@ -66,5 +66,7 @@ ALTER TABLE log_dedup
 CREATE INDEX IF NOT EXISTS idx_fact_user_date ON fact_transactions(user_id, date_id);
 CREATE INDEX IF NOT EXISTS idx_fact_user_counterparty ON fact_transactions(user_id, counterparty_name);
 CREATE INDEX IF NOT EXISTS idx_account_user ON dim_account(user_id);
+CREATE INDEX IF NOT EXISTS idx_fact_user_account_amount_created
+    ON fact_transactions(user_id, account_id, (ABS(amount)), created_at);
 CREATE INDEX IF NOT EXISTS idx_forecast_user_date ON ai_spending_forecast(user_id, forecast_date);
 CREATE INDEX IF NOT EXISTS idx_chat_user_created ON chat_messages(user_id, created_at DESC);

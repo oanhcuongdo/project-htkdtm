@@ -49,3 +49,4 @@ CREATE TABLE IF NOT EXISTS stg_raw_receipts (
 CREATE INDEX IF NOT EXISTS idx_stg_emails_status ON stg_raw_emails(parsed_status);
 CREATE INDEX IF NOT EXISTS idx_stg_statements_status ON stg_raw_statements(parsed_status);
 CREATE INDEX IF NOT EXISTS idx_stg_receipts_status ON stg_raw_receipts(parsed_status);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_stg_receipts_telegram_file ON stg_raw_receipts(telegram_file_id);
