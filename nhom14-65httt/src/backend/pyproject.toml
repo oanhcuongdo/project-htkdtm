@@ -1,0 +1,22 @@
+[project]
+name = "viviet-backend"
+version = "0.1.0"
+description = "Backend API cho Vị Việt – Website đặt món Việt tích hợp gợi ý cá nhân hóa"
+requires-python = ">=3.11"
+readme = "README.md"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true

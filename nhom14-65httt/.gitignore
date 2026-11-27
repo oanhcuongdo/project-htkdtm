@@ -1,0 +1,8 @@
+.runtime/
+.pytest_cache/
+.ruff_cache/
+*.tsbuildinfo
+src/backend/*.db
+src/backend/*.db-*
+src/backend/reports/
+src/frontend/playwright-report/
