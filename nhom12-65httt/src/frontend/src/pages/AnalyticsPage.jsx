@@ -22,21 +22,22 @@ import {
   Layers,
   LayoutDashboard,
   RefreshCw,
-  Server,
   TrendingUp,
 } from 'lucide-react';
 import { fetchMarketBIOverview } from '../services/biService';
 import { formatExactVND } from '../utils/formatters';
 
-const ENV_SUPERSET_URL = (import.meta.env.VITE_SUPERSET_DASHBOARD_URL || '').trim();
+// Cấu hình URL nhúng Apache Superset Dashboard (ưu tiên biến môi trường .env hoặc mặc định localhost:8088)
+const DEFAULT_SUPERSET_DASHBOARD_URL = 'http://localhost:8088/superset/dashboard/1/?standalone=true';
+const SUPERSET_DASHBOARD_URL = (
+  import.meta.env.VITE_SUPERSET_DASHBOARD_URL || DEFAULT_SUPERSET_DASHBOARD_URL
+).trim();
 const DEFAULT_SUPERSET_HOME = 'http://localhost:8088';
 
 const PIE_COLORS = ['#0F766E', '#0369A1', '#D97706', '#7C3AED', '#E11D48', '#059669'];
 
 export function AnalyticsPage() {
-  const [activeTab, setActiveTab] = useState(ENV_SUPERSET_URL ? 'superset' : 'live');
-  const [supersetUrl, setSupersetUrl] = useState(ENV_SUPERSET_URL);
-  const [urlInput, setUrlInput] = useState(ENV_SUPERSET_URL);
+  const [activeTab, setActiveTab] = useState('live');
 
   const [biData, setBiData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -58,11 +59,6 @@ export function AnalyticsPage() {
   useEffect(() => {
     loadOverview();
   }, []);
-
-  const handleApplySupersetUrl = (e) => {
-    e.preventDefault();
-    setSupersetUrl(urlInput.trim());
-  };
 
   return (
     <div className="space-y-6">
@@ -113,7 +109,7 @@ export function AnalyticsPage() {
           </div>
 
           <a
-            href={supersetUrl || DEFAULT_SUPERSET_HOME}
+            href={SUPERSET_DASHBOARD_URL || DEFAULT_SUPERSET_HOME}
             target="_blank"
             rel="noreferrer"
             className="inline-flex items-center gap-1.5 rounded-xl border border-teal-200 bg-teal-50/70 px-3.5 py-2 text-xs sm:text-sm font-semibold text-[#0F766E] hover:bg-teal-100 transition-colors"
@@ -410,34 +406,10 @@ export function AnalyticsPage() {
       {/* TAB 2: APACHE SUPERSET EMBEDDED */}
       {activeTab === 'superset' && (
         <div className="space-y-4">
-          {/* Thanh nhập/đổi URL Dashboard Superset nhanh */}
-          <form
-            onSubmit={handleApplySupersetUrl}
-            className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-3 shadow-xs sm:flex-row sm:items-center"
-          >
-            <div className="flex items-center gap-2 text-xs font-semibold text-[#134E4A] shrink-0">
-              <Server className="h-4 w-4 text-[#0F766E]" />
-              <span>URL Superset Dashboard:</span>
-            </div>
-            <input
-              type="url"
-              value={urlInput}
-              onChange={(e) => setUrlInput(e.target.value)}
-              placeholder="http://localhost:8088/superset/dashboard/1/?standalone=true"
-              className="flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs sm:text-sm text-slate-800 focus:border-[#0F766E] focus:outline-none"
-            />
-            <button
-              type="submit"
-              className="rounded-lg bg-[#0F766E] px-4 py-1.5 text-xs sm:text-sm font-semibold text-white hover:bg-[#134E4A] transition-colors shrink-0"
-            >
-              Áp dụng nhúng
-            </button>
-          </form>
-
-          {supersetUrl ? (
+          {SUPERSET_DASHBOARD_URL ? (
             <div className="overflow-hidden rounded-2xl border border-teal-200 bg-white shadow-sm">
               <iframe
-                src={supersetUrl}
+                src={SUPERSET_DASHBOARD_URL}
                 title="Apache Superset BI Dashboard"
                 className="h-[78vh] w-full border-0"
                 allowFullScreen
