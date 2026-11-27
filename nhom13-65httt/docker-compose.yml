@@ -63,7 +63,28 @@ services:
       - htkdtm_network
 
   # ==========================================================
-  # 4. Nền tảng Trực quan hóa Doanh nghiệp (Apache Superset)
+  # 4. Telegram Receipt Bot (chỉ bật khi đã cấu hình allowlist)
+  # ==========================================================
+  telegram_bot:
+    profiles: ["telegram"]
+    build:
+      context: ./src/backend
+      dockerfile: Dockerfile
+    container_name: htkdtm_telegram_bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    command: ["python", "-m", "ingestion.telegram_bot.bot"]
+    volumes:
+      - ./src/backend:/app
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+    networks:
+      - htkdtm_network
+
+  # ==========================================================
+  # 5. Nền tảng Trực quan hóa Doanh nghiệp (Apache Superset)
   # ==========================================================
   superset:
     build:
@@ -91,7 +112,7 @@ services:
       - htkdtm_network
 
   # ==========================================================
-  # 5. Giao diện Web Portal React (Personal CFO Hub - :3000)
+  # 6. Giao diện Web Portal React (Personal CFO Hub - :3000)
   # ==========================================================
   portal:
     build:
