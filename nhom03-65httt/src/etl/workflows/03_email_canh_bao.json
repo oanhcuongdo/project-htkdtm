@@ -1,0 +1,187 @@
+{
+  "id": "eduvisionAlertEmail",
+  "name": "EduVision - Email cảnh báo",
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Ho_Chi_Minh",
+    "saveManualExecutions": true,
+    "executionTimeout": 14400
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "nodes": [
+    {
+      "id": "a1",
+      "name": "Lịch mỗi 15 phút",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        200
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "a0",
+      "name": "Chạy thử bằng tay",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        360
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "a2",
+      "name": "Lấy cảnh báo chưa gửi",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        220,
+        200
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT a.alert_key,\n       p.platform_name,\n       COALESCE(asp.aspect_name, '(toàn nền tảng)') AS aspect_name,\n       a.metric_name,\n       a.metric_value,\n       a.threshold,\n       to_jsonb(a)->>'recommended_action' AS recommended_action,\n       to_jsonb(a)->>'responsible_department' AS responsible_department,\n       to_char(a.detected_at AT TIME ZONE 'Asia/Ho_Chi_Minh', 'DD/MM/YYYY HH24:MI') AS detected_at\nFROM dw.fact_alert a\nJOIN dw.dim_platform p ON p.platform_key = a.platform_key\nLEFT JOIN dw.dim_aspect asp ON asp.aspect_key = a.aspect_key\nWHERE a.notified_at IS NULL AND a.status = 'moi'\nORDER BY a.alert_key\nLIMIT 50",
+        "options": {}
+      },
+      "credentials": {
+        "postgres": {
+          "id": "eduvisionPostgres",
+          "name": "EduVision PostgreSQL"
+        }
+      }
+    },
+    {
+      "id": "a3",
+      "name": "Gộp thành một email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        200
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const rows = $input.all().map(i => i.json);\nconst esc = s => String(s ?? '').replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',\"'\":'&#39;'}[c]));\nconst lines = rows.map(r => `<tr><td>${esc(r.platform_name)}</td><td>${esc(r.aspect_name)}</td><td>${esc(r.metric_name)}</td><td>${esc(r.metric_value)}</td><td>${esc(r.threshold)}</td><td>${esc(r.recommended_action ?? '')}</td><td>${esc(r.responsible_department ?? '')}</td><td>${esc(r.detected_at)}</td></tr>`).join('');\nconst html = `<p>Có <b>${rows.length}</b> cảnh báo mới vượt ngưỡng:</p><table border=\"1\" cellpadding=\"6\" cellspacing=\"0\"><tr><th>Nền tảng</th><th>Khía cạnh</th><th>Chỉ số</th><th>Giá trị</th><th>Ngưỡng</th><th>Đề xuất hành động</th><th>Bộ phận phụ trách</th><th>Phát hiện lúc</th></tr>${lines}</table><p>Xem chi tiết và đánh dấu đã xử lý trên website EduVision BI.</p>`;\nreturn [{ json: { subject: `[EduVision BI] ${rows.length} cảnh báo mới`, html, alert_keys: rows.map(r => r.alert_key) } }];"
+      }
+    },
+    {
+      "id": "a4",
+      "name": "Gửi email cảnh báo",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        660,
+        200
+      ],
+      "parameters": {
+        "fromEmail": "EduVision BI <eduvision-bi@localhost>",
+        "toEmail": "canh-bao@eduvision.local",
+        "subject": "={{ $json.subject }}",
+        "emailFormat": "html",
+        "html": "={{ $json.html }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "smtp": {
+          "id": "eduvisionSmtp",
+          "name": "EduVision SMTP"
+        }
+      }
+    },
+    {
+      "id": "a5",
+      "name": "Đánh dấu đã gửi",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        880,
+        200
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ 'UPDATE dw.fact_alert SET notified_at = now() WHERE notified_at IS NULL AND alert_key IN (-1,' + $('Gộp thành một email').first().json.alert_keys.map(k => Number(k)).filter(k => Number.isSafeInteger(k)).join(',') + ')' }}",
+        "options": {}
+      },
+      "credentials": {
+        "postgres": {
+          "id": "eduvisionPostgres",
+          "name": "EduVision PostgreSQL"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Lịch mỗi 15 phút": {
+      "main": [
+        [
+          {
+            "node": "Lấy cảnh báo chưa gửi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chạy thử bằng tay": {
+      "main": [
+        [
+          {
+            "node": "Lấy cảnh báo chưa gửi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lấy cảnh báo chưa gửi": {
+      "main": [
+        [
+          {
+            "node": "Gộp thành một email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gộp thành một email": {
+      "main": [
+        [
+          {
+            "node": "Gửi email cảnh báo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gửi email cảnh báo": {
+      "main": [
+        [
+          {
+            "node": "Đánh dấu đã gửi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

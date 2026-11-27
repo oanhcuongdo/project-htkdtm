@@ -1,0 +1,506 @@
+{
+  "id": "eduvisionEtlDaily",
+  "name": "EduVision - ETL hằng ngày",
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Ho_Chi_Minh",
+    "saveManualExecutions": true,
+    "executionTimeout": 14400
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "nodes": [
+    {
+      "id": "d1",
+      "name": "Lịch 02:00 hằng ngày",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        200
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1,
+              "triggerAtHour": 2,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "d0",
+      "name": "Chạy thử bằng tay",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        360
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "d2",
+      "name": "Tham số vòng ETL",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        200
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d2-a",
+              "name": "payload",
+              "value": "={{ {\"count\": 100, \"dry_run\": false, \"skip_collect\": false} }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "d3",
+      "name": "Bắt đầu vòng ETL",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        200
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://etl-runner:8099/run",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.payload) }}"
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "eduvisionRunnerKey",
+          "name": "EduVision ETL Runner"
+        }
+      }
+    },
+    {
+      "id": "d4",
+      "name": "Đã bắt đầu?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        660,
+        200
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d4-1",
+              "leftValue": "={{ $json.statusCode }}",
+              "rightValue": 202,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "d5",
+      "name": "Chờ 60 giây",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        880,
+        100
+      ],
+      "parameters": {
+        "amount": 60,
+        "unit": "seconds"
+      }
+    },
+    {
+      "id": "d6",
+      "name": "Hỏi trạng thái",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        100
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "http://etl-runner:8099/status",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "eduvisionRunnerKey",
+          "name": "EduVision ETL Runner"
+        }
+      }
+    },
+    {
+      "id": "d7",
+      "name": "Còn đang chạy?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1320,
+        100
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d7-1",
+              "leftValue": "={{ $json.body.running }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "d8",
+      "name": "Vòng bị lỗi?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1540,
+        200
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d8-1",
+              "leftValue": "={{ $json.body.last_job.status }}",
+              "rightValue": "failed",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "d9",
+      "name": "Báo email: vòng ETL lỗi",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1760,
+        120
+      ],
+      "parameters": {
+        "fromEmail": "EduVision BI <eduvision-bi@localhost>",
+        "toEmail": "canh-bao@eduvision.local",
+        "subject": "[EduVision BI] Vòng ETL hằng ngày BỊ LỖI",
+        "emailFormat": "html",
+        "html": "=<p>Vòng ETL hằng ngày kết thúc với trạng thái <b>{{ $json.body.last_job.status }}</b> (mã thoát {{ $json.body.last_job.returncode }}).</p><p>Trạng thái vòng trong nhật ký: {{ $json.body.last_job.cycle_status }}</p><pre>{{ ($json.body.last_job.output_tail || []).join('\\n') }}</pre><p>Nhật ký đầy đủ: data/logs/pipeline_runs.jsonl</p>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "smtp": {
+          "id": "eduvisionSmtp",
+          "name": "EduVision SMTP"
+        }
+      }
+    },
+    {
+      "id": "d10",
+      "name": "Xong",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1760,
+        300
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "d11",
+      "name": "Chỉ là đang chạy hoặc vừa chạy?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        340
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d11-1",
+              "leftValue": "={{ $json.statusCode }}",
+              "rightValue": 409,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "d11-2",
+              "leftValue": "={{ $json.statusCode }}",
+              "rightValue": 429,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "d12",
+      "name": "Bỏ qua",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1100,
+        280
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "d13",
+      "name": "Báo email: không bắt đầu được",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1100,
+        440
+      ],
+      "parameters": {
+        "fromEmail": "EduVision BI <eduvision-bi@localhost>",
+        "toEmail": "canh-bao@eduvision.local",
+        "subject": "[EduVision BI] Không bắt đầu được vòng ETL",
+        "emailFormat": "html",
+        "html": "=<p>Bộ chạy ETL từ chối yêu cầu: HTTP <b>{{ $json.statusCode }}</b></p><pre>{{ JSON.stringify($json.body) }}</pre>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "smtp": {
+          "id": "eduvisionSmtp",
+          "name": "EduVision SMTP"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Lịch 02:00 hằng ngày": {
+      "main": [
+        [
+          {
+            "node": "Tham số vòng ETL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chạy thử bằng tay": {
+      "main": [
+        [
+          {
+            "node": "Tham số vòng ETL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tham số vòng ETL": {
+      "main": [
+        [
+          {
+            "node": "Bắt đầu vòng ETL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bắt đầu vòng ETL": {
+      "main": [
+        [
+          {
+            "node": "Đã bắt đầu?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Đã bắt đầu?": {
+      "main": [
+        [
+          {
+            "node": "Chờ 60 giây",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Chỉ là đang chạy hoặc vừa chạy?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chờ 60 giây": {
+      "main": [
+        [
+          {
+            "node": "Hỏi trạng thái",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hỏi trạng thái": {
+      "main": [
+        [
+          {
+            "node": "Còn đang chạy?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Còn đang chạy?": {
+      "main": [
+        [
+          {
+            "node": "Chờ 60 giây",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Vòng bị lỗi?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vòng bị lỗi?": {
+      "main": [
+        [
+          {
+            "node": "Báo email: vòng ETL lỗi",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Xong",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chỉ là đang chạy hoặc vừa chạy?": {
+      "main": [
+        [
+          {
+            "node": "Bỏ qua",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Báo email: không bắt đầu được",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

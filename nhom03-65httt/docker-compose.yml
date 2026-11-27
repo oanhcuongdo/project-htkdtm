@@ -6,12 +6,18 @@
 #   3. API:  http://localhost:8000/docs      Kiểm tra: http://localhost:8000/health/db
 #
 # Thứ tự khởi động: postgres (healthy) -> migrate (Alembic, chạy xong rồi thoát) -> api.
-# Hiện có: PostgreSQL, Alembic, API FastAPI, và Apache Superset (dịch vụ tùy chọn, profile "bi").
+# Hiện có: PostgreSQL, Alembic, API FastAPI, Apache Superset (profile "bi") và n8n (profile "automation").
 #
 # Superset nặng (ảnh khoảng 1,3 GB, cần khoảng 1 GB RAM) nên KHÔNG chạy mặc định. Ai cần dashboard thì:
 #   1. Điền thêm các biến SUPERSET_* trong .env (xem .env.example)
 #   2. docker compose --profile bi up -d --build        Superset: http://localhost:8088
-# Chưa có (bổ sung ở PR riêng): n8n, website (chạy riêng bằng `npm run dev` trong src/frontend).
+#
+# Tự động hóa (n8n) cũng là tùy chọn, profile "automation": etl-runner (bọc run_pipeline.py sau HTTP), n8n (lập lịch ETL
+# hằng ngày, webhook "Cập nhật dữ liệu", email cảnh báo) và Mailpit (hộp thư thử, không gửi ra ngoài):
+#   1. Điền ETL_RUNNER_TOKEN và N8N_ENCRYPTION_KEY trong .env (xem .env.example)
+#   2. docker compose --profile automation up -d --build     n8n: http://localhost:5678   Mailpit: http://localhost:8025
+#   Hướng dẫn nhập workflow: src/etl/workflows/README.md
+# Chưa có (bổ sung ở PR riêng): website (chạy riêng bằng `npm run dev` trong src/frontend).
 
 services:
   postgres:
@@ -118,6 +124,86 @@ services:
       retries: 10
       start_period: 120s
 
+  # Bộ chạy ETL qua HTTP cho n8n (src/etl/runner). Chỉ nghe trong mạng Compose, KHÔNG mở cổng ra máy chủ.
+  etl-runner:
+    profiles: ["automation"]
+    build:
+      context: .
+      dockerfile: src/etl/runner/Dockerfile
+    image: eduvision-etl-runner:dev
+    container_name: eduvision-etl-runner
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      # Không có giá trị mặc định cho khóa; dịch vụ từ chối khởi động nếu thiếu hoặc ngắn hơn 16 ký tự.
+      ETL_RUNNER_TOKEN: ${ETL_RUNNER_TOKEN:-}
+      ETL_RUNNER_MIN_INTERVAL: ${ETL_RUNNER_MIN_INTERVAL:-60}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: ${POSTGRES_DB:-eduvision}
+      POSTGRES_USER: ${POSTGRES_USER:-eduvision}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      EDUVISION_LOG_DIR: ${ETL_RUNNER_LOG_DIR:-}
+      TZ: Asia/Ho_Chi_Minh
+    volumes:
+      # Dữ liệu thô và nhật ký dùng chung với lần chạy tay và Task Scheduler (cùng khóa pipeline.lock nên không chạy chồng).
+      - ./data:/repo/nhom03-65httt/data
+
+  # n8n: lập lịch ETL hằng ngày, webhook "Cập nhật dữ liệu", gửi email cảnh báo. Workflow nằm ở src/etl/workflows.
+  n8n:
+    profiles: ["automation"]
+    image: docker.n8n.io/n8nio/n8n:2.49.7
+    container_name: eduvision-n8n
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      etl-runner:
+        condition: service_healthy
+    environment:
+      # Khóa mã hóa thông tin đăng nhập lưu trong n8n. Đặt cố định trong .env để không mất kết nối khi dựng lại volume.
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:-}
+      GENERIC_TIMEZONE: Asia/Ho_Chi_Minh
+      TZ: Asia/Ho_Chi_Minh
+      N8N_HOST: localhost
+      N8N_PORT: "5678"
+      N8N_PROTOCOL: http
+      WEBHOOK_URL: http://localhost:${N8N_PORT:-5678}/
+      N8N_SECURE_COOKIE: "false"          # chỉ truy cập qua http://localhost; bật lại khi có HTTPS
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      N8N_VERSION_NOTIFICATIONS_ENABLED: "false"
+      N8N_TEMPLATES_ENABLED: "false"
+    ports:
+      - "127.0.0.1:${N8N_PORT:-5678}:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./src/etl/workflows:/workflows:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:5678/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # Hộp thư thử: nhận email mà n8n gửi (SMTP mailpit:1025) và hiển thị ở http://localhost:8025. Không gửi ra Internet.
+  mailpit:
+    profiles: ["automation"]
+    image: axllent/mailpit:v1.34.0
+    container_name: eduvision-mailpit
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${MAILPIT_UI_PORT:-8025}:8025"
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
 volumes:
   pgdata:
   superset_home:
+  n8n_data:

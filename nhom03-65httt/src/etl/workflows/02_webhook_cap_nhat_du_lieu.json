@@ -1,0 +1,149 @@
+{
+  "id": "eduvisionRefreshWebhook",
+  "name": "EduVision - Webhook Cập nhật dữ liệu",
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Ho_Chi_Minh",
+    "saveManualExecutions": true,
+    "executionTimeout": 14400
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "nodes": [
+    {
+      "id": "w1",
+      "name": "Webhook Cập nhật dữ liệu",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        200
+      ],
+      "webhookId": "eduvision-refresh",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eduvision-refresh",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "eduvisionWebhookKey",
+          "name": "EduVision Webhook Key"
+        }
+      }
+    },
+    {
+      "id": "w2",
+      "name": "Tham số vòng ETL",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        200
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "w2-a",
+              "name": "payload",
+              "value": "={{ $json.body ?? {} }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "w3",
+      "name": "Bắt đầu vòng ETL",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        200
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://etl-runner:8099/run",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.payload) }}"
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "eduvisionRunnerKey",
+          "name": "EduVision ETL Runner"
+        }
+      }
+    },
+    {
+      "id": "w4",
+      "name": "Trả lời nút bấm",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        660,
+        200
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ accepted: $json.statusCode === 202, http_status: $json.statusCode, ...$json.body }) }}",
+        "options": {
+          "responseCode": "={{ $json.statusCode }}"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook Cập nhật dữ liệu": {
+      "main": [
+        [
+          {
+            "node": "Tham số vòng ETL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tham số vòng ETL": {
+      "main": [
+        [
+          {
+            "node": "Bắt đầu vòng ETL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bắt đầu vòng ETL": {
+      "main": [
+        [
+          {
+            "node": "Trả lời nút bấm",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

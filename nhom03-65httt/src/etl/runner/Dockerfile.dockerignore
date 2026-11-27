@@ -1,0 +1,16 @@
+# Build context là nhom03-65httt: loại mọi thứ không cần để ảnh nhỏ và không lọt dữ liệu thật hay khóa vào ảnh.
+.git
+.env
+.env.*
+data
+models
+docs
+**/__pycache__
+**/*.pyc
+**/node_modules
+**/tests
+src/frontend
+src/backend
+src/bi
+src/ml
+src/database
