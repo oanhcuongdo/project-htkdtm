@@ -56,6 +56,62 @@ def test_receipt_ocr_text_parser():
     assert dto.amount == -55000.0
     assert dto.counterparty_name == "Highlands Coffee"
     assert dto.source_type == "TELEGRAM"
+    assert dto.transaction_time.isoformat() == "2026-11-23T09:15:00+07:00"
+    assert "Phin Sua Da" in dto.raw_description
+    assert dto.raw_metadata["transaction_time_inferred"] is False
+
+
+def test_receipt_ocr_normalizes_localized_amount_and_iso_date():
+    dto = ReceiptOCREngine().parse_receipt_text(
+        "Description: Taxi to airport\nDate: 2026-11-23 09:15\nTotal: 1.234.567 VND"
+    )
+    assert dto is not None
+    assert dto.amount == -1234567.0
+    assert dto.transaction_time.isoformat() == "2026-11-23T09:15:00+07:00"
+    assert "Taxi to airport" in dto.raw_description
+
+
+def test_receipt_ocr_rejects_invalid_explicit_date():
+    dto = ReceiptOCREngine().parse_receipt_text(
+        "Highlands Coffee\n31/02/2026 09:15\nTotal: 55,000 VND"
+    )
+    assert dto is None
+
+
+def test_receipt_ocr_marks_missing_date_as_inferred():
+    dto = ReceiptOCREngine().parse_receipt_text("Highlands Coffee\nTotal: 55,000 VND")
+    assert dto is not None
+    assert dto.transaction_time.utcoffset().total_seconds() == 7 * 60 * 60
+    assert dto.raw_metadata["transaction_time_inferred"] is True
+
+
+def test_deduplicator_uses_exact_ten_minute_window():
+    from datetime import timedelta, timezone
+    from etl_pipeline.deduplicator import DeduplicationEngine
+
+    tx_time = datetime(2026, 11, 23, 9, 15, tzinfo=timezone(timedelta(hours=7)))
+
+    class Result:
+        def first(self):
+            return None
+
+        def fetchall(self):
+            return []
+
+    class Session:
+        def __init__(self):
+            self.queries = []
+
+        def execute(self, query, params):
+            self.queries.append((str(query), params))
+            return Result()
+
+    db = Session()
+    DeduplicationEngine.check_duplicate(db, 2, -55000, tx_time, None, "Coffee")
+    sql, params = db.queries[0]
+    assert "created_at BETWEEN :start_time AND :end_time" in sql
+    assert params["start_time"] == tx_time - timedelta(minutes=10)
+    assert params["end_time"] == tx_time + timedelta(minutes=10)
 
 
 def test_cleaner_internal_transfer_and_jaro_winkler():

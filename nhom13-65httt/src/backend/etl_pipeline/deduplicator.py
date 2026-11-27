@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, Tuple
 from rapidfuzz.distance import JaroWinkler
 from sqlalchemy import text
@@ -44,24 +44,22 @@ class DeduplicationEngine:
             if exact_row:
                 return True, int(exact_row[0]), "EXACT_REF_CODE", 1.0
 
-        # 2. Quy tắc 2: Khớp gần đúng theo (user, tài khoản, số tiền, khung thời gian +-10 phút, Jaro-Winkler >= 0.8)
+        # 2. Quy tắc 2: Khớp gần đúng theo (user, tài khoản, số tiền, thời gian +-10 phút, Jaro-Winkler >= 0.8)
         candidates = db.execute(
             text("""
-                SELECT f.transaction_id, f.clean_description, f.raw_description, f.created_at, d.full_date, d.hour
+                SELECT f.transaction_id, f.clean_description, f.raw_description
                 FROM fact_transactions f
-                JOIN dim_date d ON f.date_id = d.date_id
                 WHERE f.user_id = :uid
                   AND f.account_id = :acc_id
                   AND ABS(f.amount) = :abs_amt
-                  AND d.full_date = :tx_date
-                  AND ABS(d.hour - :tx_hour) <= 1
+                  AND f.created_at BETWEEN :start_time AND :end_time
             """),
             {
                 "uid": user_id,
                 "acc_id": account_id,
                 "abs_amt": abs(amount),
-                "tx_date": tx_time.date(),
-                "tx_hour": tx_time.hour,
+                "start_time": tx_time - timedelta(minutes=cls.TIME_WINDOW_MINUTES),
+                "end_time": tx_time + timedelta(minutes=cls.TIME_WINDOW_MINUTES),
             },
         ).fetchall()
 
