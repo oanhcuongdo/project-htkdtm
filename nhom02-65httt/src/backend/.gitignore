@@ -1,0 +1,5 @@
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+cdp_captured_payloads.json

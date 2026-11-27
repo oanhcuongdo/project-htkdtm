@@ -1,0 +1,12 @@
+
+node_modules
+dist
+dist-ssr
+*.local
+.env
+.env.*
+.vite
+.contextia/
+src/mocks/collected-tiktok-vn.json
+!.env.example
+!src/lib/ 

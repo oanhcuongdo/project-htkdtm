@@ -1,0 +1,270 @@
+{
+  "crawled_at_utc": "2026-11-18T08:54:39.422166+00:00",
+  "lazada_direct_pdp": [
+    {
+      "source": "lazada.vn (Direct PDP)",
+      "url": "https://www.lazada.vn/products/chuot-khong-day-logitech-m185-wireless-usbxam-den-hang-chinh-hang-i2174655511.html",
+      "http_status": 200,
+      "latency_ms": 234,
+      "html_bytes": 256014,
+      "name": "Chuột không dây Logitech  M185 Wireless (USB/Xám đen) hàng chính hãng",
+      "price_raw": "285.000 ₫",
+      "price_vnd": 285000,
+      "brand": "Logitech",
+      "item_id": 2174655511,
+      "sku_id": 10289650695,
+      "category": "Linh kiện & phụ kiện điện tử > Phụ kiện Máy tính > Bàn phím & chuột",
+      "availability": "https://schema.org/InStock",
+      "seller_id": "200305184662"
+    },
+    {
+      "source": "lazada.vn (Direct PDP)",
+      "url": "https://www.lazada.vn/products/chuot-khong-day-logitech-m331-den-i683118869.html",
+      "http_status": 200,
+      "latency_ms": 287,
+      "html_bytes": 245386,
+      "name": "Chuột không dây Logitech M331 (Đen)",
+      "price_raw": "350.000 ₫",
+      "price_vnd": 350000,
+      "brand": "Logitech",
+      "item_id": 683118869,
+      "sku_id": 1676634611,
+      "category": "Linh kiện & phụ kiện điện tử > Phụ kiện Máy tính > Bàn phím & chuột",
+      "availability": "https://schema.org/InStock",
+      "seller_id": "100008703"
+    },
+    {
+      "source": "lazada.vn (Direct PDP)",
+      "url": "https://www.lazada.vn/products/ban-phim-gaming-logitech-g213-prodigy-rgb-i1249690979.html",
+      "http_status": 200,
+      "latency_ms": 259,
+      "html_bytes": 258794,
+      "name": "Bàn Phím Gaming Logitech G213 Prodigy RGB",
+      "price_raw": "1.189.000 ₫",
+      "price_vnd": 1189000,
+      "brand": "Logitech",
+      "item_id": 1249690979,
+      "sku_id": 4658314059,
+      "category": "Linh kiện & phụ kiện điện tử > Phụ kiện Máy tính > Bàn phím & chuột",
+      "availability": "https://schema.org/InStock",
+      "seller_id": "200166441754"
+    }
+  ],
+  "shopee_via_history_apis": [
+    {
+      "source": "shopee (via lichsugia.net + lichsugia.com)",
+      "query_keyword": "Chuột không dây Logitech M185",
+      "shop_id": "52679373",
+      "item_id": "22369788114",
+      "product_url": "https://shopee.vn/product/52679373/22369788114",
+      "name": "Chuột Bluetooth Logitech M240 Silent - Không dây, Nhỏ gọn, Tương thích Windows, macOS, ChromeOS",
+      "is_mall_shop": true,
+      "price_vnd": 409000,
+      "original_price_vnd": 550000,
+      "price_min_vnd": 409000,
+      "price_max_vnd": 419000,
+      "sold": 30000,
+      "rating_avg": 4.9,
+      "history_points_count": 56,
+      "history_sample_first_3": [
+        {
+          "date": "2025-05-25T00:00:00.000Z",
+          "price": 349000
+        },
+        {
+          "date": "2025-05-26T00:00:00.000Z",
+          "price": 355000
+        },
+        {
+          "date": "2025-06-01T00:00:00.000Z",
+          "price": 349000
+        }
+      ],
+      "history_sample_last_3": [
+        {
+          "date": "2026-10-29T16:34:03.987Z",
+          "price": 409000
+        },
+        {
+          "date": "2026-11-01T21:44:14.744Z",
+          "price": 399000
+        },
+        {
+          "date": "2026-11-05T03:48:56.677Z",
+          "price": 409000
+        }
+      ],
+      "statis_90d": {
+        "price": 409000,
+        "min": 399000,
+        "max": 550000,
+        "avg": 412436,
+        "min_time_text": "25/08/2026",
+        "max_time_text": "31/10/2026",
+        "all_min": 339150,
+        "verdict": "Thấp hơn giá trung bình 1%",
+        "fake": ""
+      },
+      "latency_ms": 181
+    },
+    {
+      "source": "shopee (via lichsugia.net + lichsugia.com)",
+      "query_keyword": "Chuột không dây Logitech M185",
+      "shop_id": "438442761",
+      "item_id": "51751460392",
+      "product_url": "https://shopee.vn/product/438442761/51751460392",
+      "name": "[ Kết Nối USB 2.4GHz  ] Chuột không dây silent Logitech M220 siêu yên tĩnh giảm 90% tiếng ồn QUÀ TẶNG LÓT CHUỘT",
+      "is_mall_shop": false,
+      "price_vnd": 119000,
+      "original_price_vnd": 190000,
+      "price_min_vnd": 119000,
+      "price_max_vnd": 119000,
+      "sold": 9000,
+      "rating_avg": 4.87,
+      "history_points_count": 3,
+      "history_sample_first_3": [
+        {
+          "date": "2026-01-01T19:06:01.000Z",
+          "price": 119000
+        },
+        {
+          "date": "2026-06-28T00:44:26.131Z",
+          "price": 190000
+        },
+        {
+          "date": "2026-07-01T04:08:33.691Z",
+          "price": 119000
+        }
+      ],
+      "history_sample_last_3": [
+        {
+          "date": "2026-01-01T19:06:01.000Z",
+          "price": 119000
+        },
+        {
+          "date": "2026-06-28T00:44:26.131Z",
+          "price": 190000
+        },
+        {
+          "date": "2026-07-01T04:08:33.691Z",
+          "price": 119000
+        }
+      ],
+      "statis_90d": {
+        "price": 119000,
+        "min": 99000,
+        "max": 190000,
+        "avg": 117118,
+        "min_time_text": "02/11/2026",
+        "max_time_text": "31/10/2026",
+        "all_min": 99000,
+        "verdict": "Cao hơn giá trung bình 2%",
+        "fake": ""
+      },
+      "latency_ms": 213
+    }
+  ],
+  "tiki_open_api": [
+    {
+      "source": "tiki.vn (Public API v2)",
+      "query_keyword": "chuot logitech m185",
+      "id": 54665,
+      "sku": "5007102619128",
+      "name": "Chuột không dây Logitech M185 - Hàng chính hãng - Màu",
+      "brand": "Logitech",
+      "price_vnd": 228000,
+      "original_price_vnd": 289000,
+      "discount_rate": 21,
+      "sold": 7116,
+      "rating_avg": 4.7,
+      "latency_ms": 111
+    },
+    {
+      "source": "tiki.vn (Public API v2)",
+      "query_keyword": "chuot logitech m185",
+      "id": 225920420,
+      "sku": "4424551025975",
+      "name": "Chuột không dây M185 Logitech Wireless - Hàng Chính Hãng",
+      "brand": "Logitech",
+      "price_vnd": 324000,
+      "original_price_vnd": 324000,
+      "discount_rate": 0,
+      "sold": 44,
+      "rating_avg": 5,
+      "latency_ms": 111
+    },
+    {
+      "source": "tiki.vn (Public API v2)",
+      "query_keyword": "chuot logitech m185",
+      "id": 217085405,
+      "sku": "5281837969444",
+      "name": "Chuột không dây Logitech M185 - Hàng chính hãng",
+      "brand": "Logitech",
+      "price_vnd": 349000,
+      "original_price_vnd": 349000,
+      "discount_rate": 0,
+      "sold": 2,
+      "rating_avg": 0,
+      "latency_ms": 111
+    }
+  ],
+  "giarevn_chart_sample": {
+    "source": "giarevn.com",
+    "target_url": "https://shopee.vn/product/52679373/1592328943",
+    "http_status": 200,
+    "latency_ms": 585,
+    "slug": "/product/MV9fMTU5MjMyODk0M19fNTI2NzkzNzM",
+    "prices": [
+      309000,
+      309000,
+      329000
+    ],
+    "labels": [
+      "21/03/2026",
+      "23/03/2026",
+      "18/11/2026"
+    ]
+  },
+  "retail_benchmarks": {
+    "cellphones.com.vn": {
+      "http_status": 200,
+      "items_count": 32,
+      "sample": [
+        {
+          "name": "Chuột gaming không dây Asus ROG Strix Impact III WL",
+          "price_vnd": 1090000
+        },
+        {
+          "name": "Chuột không dây Logitech Signature M650 Size M",
+          "price_vnd": 645000
+        },
+        {
+          "name": "Chuột Bluetooth Logitech M196",
+          "price_vnd": 279000
+        },
+        {
+          "name": "Chuột không dây Logitech M331",
+          "price_vnd": 340000
+        },
+        {
+          "name": "Combo bàn phím + Chuột không dây Logitech MK295 Silent",
+          "price_vnd": 599000
+        }
+      ]
+    },
+    "websosanh.vn": {
+      "http_status": 200,
+      "prices_extracted_count": 32,
+      "sample_prices": [
+        "250.000 đ",
+        "250.000 đ",
+        "263.000 đ",
+        "116.000 đ",
+        "295.000 đ",
+        "299.000 đ",
+        "160.000 đ",
+        "106.000 đ"
+      ]
+    }
+  }
+}
