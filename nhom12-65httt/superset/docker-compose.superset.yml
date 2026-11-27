@@ -1,0 +1,25 @@
+services:
+  superset:
+    image: apache/superset:4.0.2
+    container_name: smartrent-superset
+    restart: unless-stopped
+    ports:
+      - "8088:8088"
+    environment:
+      - SUPERSET_CONFIG_PATH=/app/pythonpath/superset_config.py
+      - SUPERSET_SECRET_KEY=nhom12-65httt-smartrent-superset-secret-key
+      - FLASK_APP=superset
+    volumes:
+      - ./superset_config.py:/app/pythonpath/superset_config.py:ro
+      - superset_home:/app/superset_home
+    command: >
+      bash -c "
+      pip install --no-cache-dir psycopg2-binary &&
+      superset db upgrade &&
+      superset fab create-admin --username admin --firstname Admin --lastname Nhom12 --email admin@smartrent.local --password admin123 || true &&
+      superset init &&
+      superset run -h 0.0.0.0 -p 8088 --with-threads --reload
+      "
+
+volumes:
+  superset_home:
