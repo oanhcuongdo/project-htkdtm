@@ -451,6 +451,13 @@ Không tạo file `.pbix` rỗng thay cho sản phẩm Power BI và không đán
 - Unit test chưa chạy được trong lượt này: Windows Application Control chặn node_modules/@rolldown/binding-win32-x64-msvc/rolldown-binding.win32-x64-msvc.node; Vitest fallback WASI không có. Đã xác nhận bằng require native binding trực tiếp. Mốc 378 unit/UI là kết quả lượt trước, không ghi là kiểm chứng lại cho đợt này. Cần chạy lại Vitest trên môi trường được phép nạp binding trước khi coi kiểm chứng đầy đủ.
 - Chưa stage/commit/push. Toàn bộ giao diện chưa hoàn tất; bản đồ/geocoding, thống kê và các màn hình phụ thuộc API còn như bảng rà soát. Tiếp tục gom nhiều việc liên quan cho mỗi commit theo yêu cầu mới.
 
+## Bản đồ vị trí quán và chỉ đường F.12.23
+
+- Gom MapView, tiện ích URL bản đồ/chỉ đường và tích hợp RestaurantInfo dùng chung ở trang quán/món. Bản đồ OpenStreetMap iframe chỉ tải khi bấm xem; có ẩn, tọa độ văn bản, attribution và link mở ngoài khi không hiển thị. Liên kết Google Maps chỉ gửi tọa độ đích công khai, không gửi vị trí khách hay token. Tọa độ sai không tạo URL.
+- Không cần API key/dependency mới. Tài liệu đã đối chiếu: https://wiki.openstreetmap.org/wiki/Export (HTML iframe) và https://developers.google.com/maps/documentation/urls/get-started (Maps URLs). Đây là bản đồ một quán; chưa có geocoding, chọn điểm trên bản đồ hay bản đồ nhiều kết quả tìm kiếm. Nội dung bên trong iframe do nhà cung cấp quản lý; không thể xác nhận tile đã tải chỉ bằng sự kiện iframe.
+- Ba Playwright maps/catalog đạt với API kiểm soát, gồm chặn request OSM để xác nhận fallback và thực đơn vẫn hoạt động, không tải trước khi bấm và URL đích đúng. Không tràn ngang 360/1280px; typecheck/lint/build đạt. Chưa kiểm chứng tile/provider trực tiếp hoặc backend thật.
+- Thêm sáu ca unit URL nhưng Vitest vẫn không khởi động do native binding Rolldown bị chặn như F.12.22; chưa ghi các ca này đạt. Không thay dependencies để vượt chính sách hệ thống. Chưa stage/commit/push; toàn bộ giao diện chưa hoàn tất.
+
 ## Dọn bản nháp cục bộ
 
 - Theo yêu cầu người dùng, chỉ dọn bản nháp khi bản chính tương ứng đã được tích hợp, kiểm thử, commit và không có thay đổi chưa commit.

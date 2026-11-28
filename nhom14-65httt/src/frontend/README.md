@@ -283,6 +283,12 @@ OrderCard dùng chung cho hai danh sách đơn, nhận đường chi tiết theo
 
 Tám Playwright search/orders/vendorOrders/commonNavigation đạt với API kiểm soát; TypeScript/lint/build đạt. Unit test lượt này bị chặn khởi động: Windows Application Control không cho nạp native binding Rolldown. Mốc 378 unit/UI thuộc lượt trước; cần chạy lại Vitest trong môi trường cho phép trước khi xác nhận toàn bộ kiểm thử. Không đổi dependencies để vượt chính sách hệ thống.
 
+## Bản đồ quán và chỉ đường — F.12.23
+
+RestaurantInfo ở trang quán/món tích hợp MapView: bấm **Xem bản đồ quán** mới tải iframe OpenStreetMap; có ẩn, địa chỉ/tọa độ và liên kết mở bản đồ ngoài khi không tải. Chỉ đường mở Google Maps với tọa độ đích quán, không gửi origin/vị trí khách hoặc token. Không cần API key/dependency. Đối chiếu [OSM HTML export](https://wiki.openstreetmap.org/wiki/Export) và [Google Maps URLs](https://developers.google.com/maps/documentation/urls/get-started). Nội dung iframe do nhà cung cấp quản lý, fallback luôn có vì không thể kiểm tra tile xuyên origin.
+
+Phần này thay ghi chú chưa có MapView ở mốc cũ nhưng chưa bao gồm geocoding, chọn điểm hoặc bản đồ nhiều kết quả tìm kiếm. Ba Playwright maps/catalog đạt với request API/OSM kiểm soát, typecheck/lint/build đạt; chưa kiểm chứng bản đồ nhà cung cấp trực tiếp/backend thật. Unit URL đã viết nhưng chưa chạy được vì native binding Rolldown bị Windows Application Control chặn như F.12.22.
+
 ## Auth đã triển khai
 
 | Route | Nội dung hiện có |
