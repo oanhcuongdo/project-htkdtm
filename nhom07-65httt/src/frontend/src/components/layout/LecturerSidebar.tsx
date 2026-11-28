@@ -1,0 +1,102 @@
+'use client'
+
+import { useRouter, usePathname } from 'next/navigation'
+import { Home, BookOpen, Users, BarChart3, FileText, Settings, User, LogOut } from 'lucide-react'
+import { useAppStore } from '../../stores/appStore'
+import { Avatar } from '../ui/Avatar'
+import { cn } from '../../utils/cn'
+
+const mainNavItems = [
+  { id: 'dashboard', label: 'Tổng quan', icon: Home, path: '/app/lecturer/dashboard' },
+  { id: 'courses', label: 'Khóa học', icon: BookOpen, path: '/app/lecturer/courses' },
+  { id: 'students', label: 'Học viên', icon: Users, path: '/app/lecturer/students' },
+]
+
+const adminNavItems = [
+  { id: 'documents', label: 'Thư viện tài liệu', icon: FileText, path: '/app/lecturer/documents' },
+  { id: 'analytics', label: 'Thống kê', icon: BarChart3, path: '/app/lecturer/analytics' },
+]
+
+export function LecturerSidebar() {
+  const router = useRouter()
+  const pathname = usePathname() ?? ''
+  const user = useAppStore((s) => s.auth.user)!
+  const logout = useAppStore((s) => s.auth.logout)
+
+  const renderNavButton = (item: typeof mainNavItems[0]) => {
+    const active = pathname.startsWith(item.path)
+    const Icon = item.icon
+    return (
+      <button
+        key={item.id}
+        onClick={() => router.push(item.path)}
+        className={cn(
+          'flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-all duration-150 group',
+          active
+            ? 'bg-primary text-primary-foreground shadow-soft'
+            : 'text-foreground/80 hover:bg-muted hover:text-foreground'
+        )}
+      >
+        <Icon className={cn("h-4 w-4 shrink-0", active ? "text-primary-foreground" : "text-muted-foreground")} />
+        <span className="flex-1">{item.label}</span>
+        {active && <span className="h-1.5 w-1.5 rounded-full bg-primary-foreground" />}
+      </button>
+    )
+  }
+
+  return (
+    <div className="flex h-full flex-col gap-4 font-body">
+      {/* Profile Card */}
+      <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/25 p-3">
+        <Avatar fallback={user.initials} size="md" status="online" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-foreground truncate">{user.name}</p>
+          <p className="text-xs text-muted-foreground font-medium">
+            {user.role === 'admin' ? 'Quản trị viên' : user.role === 'lecturer' ? 'Giảng viên' : 'Học viên'}
+          </p>
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <div className="flex-1 flex flex-col gap-4 overflow-y-auto scrollbar-thin">
+        {/* Teaching section */}
+        <div className="flex flex-col gap-1">
+          <span className="px-3 text-xs font-medium text-muted-foreground mb-1">Giảng dạy</span>
+          {mainNavItems.map(renderNavButton)}
+        </div>
+
+        {/* Management & Setup section */}
+        <div className="flex flex-col gap-1">
+          <span className="px-3 text-xs font-medium text-muted-foreground mb-1">Quản lý</span>
+          {adminNavItems.map(renderNavButton)}
+        </div>
+
+      </div>
+
+      {/* Footer */}
+      <div className="flex flex-col gap-1 pt-2 border-t border-border">
+        <button
+          onClick={() => router.push('/app/lecturer/profile')}
+          className="flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition"
+        >
+          <User className="h-4 w-4 text-foreground/75" />
+          <span>Hồ sơ cá nhân</span>
+        </button>
+        <button
+          onClick={() => router.push('/app/lecturer/settings')}
+          className="flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition"
+        >
+          <Settings className="h-4 w-4 text-foreground/75" />
+          <span>Cài đặt</span>
+        </button>
+        <button
+          onClick={() => { logout(); router.push('/welcome') }}
+          className="flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition"
+        >
+          <LogOut className="h-4 w-4" />
+          <span>Đăng xuất</span>
+        </button>
+      </div>
+    </div>
+  )
+}

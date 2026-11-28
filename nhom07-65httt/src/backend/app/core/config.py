@@ -1,0 +1,205 @@
+from typing import Any
+from pathlib import Path
+
+from pydantic import field_validator, model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+REQUIRED_CORS_ORIGINS = {
+    "https://learninghubs.tech",
+    "https://www.learninghubs.tech",
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://localhost:13000",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:13000",
+}
+
+
+class Settings(BaseSettings):
+    APP_NAME: str = "Learning Hub API"
+    DEBUG: bool = False
+
+    DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/ai_learning_hub"
+    REDIS_URL: str = "redis://localhost:6379/0"
+    CELERY_BROKER_URL: str = "redis://localhost:6379/1"
+    QDRANT_HOST: str = "localhost"
+    QDRANT_PORT: int = 6333
+    QDRANT_URL: str | None = None
+    QDRANT_API_KEY: str | None = None
+
+    MINIO_ENDPOINT: str = ""
+    MINIO_ACCESS_KEY: str = ""
+    MINIO_SECRET_KEY: str = ""
+    MINIO_BUCKET_NAME: str = "learninghubs"
+    MINIO_SECURE: bool = False
+
+    DB_POOL_SIZE: int = 5
+    DB_MAX_OVERFLOW: int = 10
+    DB_POOL_RECYCLE: int = 1800
+    DB_POOL_PRE_PING: bool = True
+    DB_SSL_MODE: str = "require"
+
+    REDIS_CACHE_TTL_DOCS: int = 60
+    REDIS_CACHE_TTL_PROFILE: int = 300
+    REDIS_CACHE_TTL_QUIZ: int = 3600
+    REDIS_CACHE_TTL_COURSES: int = 120
+    REDIS_CACHE_TTL_CATEGORIES: int = 600
+    REDIS_CACHE_TTL_ENROLLMENTS: int = 60
+    REDIS_CACHE_TTL_ANNOUNCEMENTS: int = 120
+    REDIS_CACHE_TTL_LESSONS: int = 120
+    RATE_LIMIT_AUTH: str = "60/minute"
+    RATE_LIMIT_LOGIN: str = "10/minute"
+    RATE_LIMIT_REGISTER: str = "10/minute"
+    RATE_LIMIT_CHAT: str = "30/minute"
+    RATE_LIMIT_UPLOAD: str = "5/minute"
+    RATE_LIMIT_ADMIN: str = "60/minute"
+
+    SECRET_KEY: str = ""
+    AI_KEY_ENCRYPTION_KEY: str = ""
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+
+    # OAuth Settings
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+    FACEBOOK_APP_ID: str = ""
+    FACEBOOK_APP_SECRET: str = ""
+
+
+    CORS_ORIGINS: Any = ["http://localhost:5173", *sorted(REQUIRED_CORS_ORIGINS)]
+    FRONTEND_URL: str = "https://learninghubs.tech"
+    TRUSTED_PROXY_IPS: str = ""
+
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
+    def assemble_cors_origins(cls, v: Any) -> list[str]:
+        origins: list[str]
+        if isinstance(v, str):
+            v = v.strip()
+            if v.startswith("[") and v.endswith("]"):
+                try:
+                    import json
+                    origins = json.loads(v)
+                except Exception:
+                    v = v[1:-1]
+                    origins = [i.strip().strip("'\"") for i in v.split(",") if i.strip()]
+            else:
+                origins = [i.strip().strip("'\"") for i in v.split(",") if i.strip()]
+        elif isinstance(v, list):
+            origins = v
+        else:
+            raise ValueError(v)
+
+        normalized = {str(origin).rstrip("/") for origin in origins if origin}
+        if "*" in normalized:
+            raise ValueError("Wildcard CORS origins are not allowed")
+        return sorted(normalized | REQUIRED_CORS_ORIGINS)
+
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def assemble_db_url(cls, v: Any) -> str:
+        if isinstance(v, str):
+            if v.startswith("postgres://"):
+                v = v.replace("postgres://", "postgresql://", 1)
+            if v.startswith("postgresql://") and not v.startswith("postgresql+asyncpg://"):
+                v = v.replace("postgresql://", "postgresql+asyncpg://", 1)
+            
+            # Strip query parameters unsupported by asyncpg; SSL is handled via DB_SSL_MODE
+            from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
+            try:
+                parsed = urlparse(v)
+                if parsed.query:
+                    query_params = parse_qsl(parsed.query)
+                    unsupported = {"pgbouncer", "sslmode", "channel_binding"}
+                    filtered_params = [(k, val) for k, val in query_params if k.lower() not in unsupported]
+                    v = urlunparse(parsed._replace(query=urlencode(filtered_params)))
+            except Exception:
+                pass
+        return v
+
+    AI_SERVICE_URL: str = "http://localhost:8001"
+    # RAG pipeline (intent 10s + retriever 60s cold-start + grader 15s +
+    # generator 60s + reflector 30s + retry 60s) can exceed 2 minutes worst
+    # case; warm path is usually <20s. 150s covers both without the
+    # gateway giving up before the AI service finishes.
+    AI_SERVICE_TIMEOUT: float = 150.0
+    INTERNAL_API_KEY: str = ""
+
+    SMTP_HOST: str = "localhost"
+    SMTP_PORT: int = 1025
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_USE_TLS: bool = False
+    MAIL_FROM: str = "noreply@learninghub.ai"
+    MAIL_FROM_NAME: str = "Learning Hub"
+
+    # Payment Gateway Configuration
+    VNPAY_URL: str = "https://sandbox.vnpay.vn/payv2/vpcpay.html"
+    VNPAY_MERCHANT_ID: str = ""
+    VNPAY_HASH_SECRET: str = ""
+    VNPAY_RETURN_URL: str = "http://localhost:3000/payment/return"
+
+    MOMO_URL: str = "https://test-payment.momo.vn/v2/gateway/api/create"
+    MOMO_PARTNER_CODE: str = ""
+    MOMO_ACCESS_KEY: str = ""
+    MOMO_SECRET_KEY: str = ""
+    MOMO_RETURN_URL: str = "http://localhost:3000/payment/return"
+    ENABLE_MOCK_PAYMENT: bool = True
+
+    @model_validator(mode="after")
+    def validate_secrets(self) -> "Settings":
+        import os
+        import sys
+        # Bypass validation during migrations (alembic) or test execution
+        is_migration_or_test = (
+            "alembic" in sys.modules
+            or any("alembic" in arg for arg in sys.argv)
+            or os.environ.get("MIGRATION_MODE") == "True"
+            or "pytest" in sys.modules
+        )
+        if is_migration_or_test:
+            return self
+
+        # These checks ALWAYS run regardless of DEBUG
+        WEAK_SECRET_KEYS = {"", "mysecretkey", "your_secret_key_for_jwt", "changeme", "secret"}
+        WEAK_INTERNAL_KEYS = {"", "your_internal_api_key", "your_internal_key", "changeme", "secret"}
+
+        if not self.SECRET_KEY or self.SECRET_KEY in WEAK_SECRET_KEYS or len(self.SECRET_KEY) < 32:
+            raise ValueError(
+                "SECRET_KEY must be a secure, non-default string (min 32 chars). "
+                "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\""
+            )
+        if not self.INTERNAL_API_KEY or self.INTERNAL_API_KEY in WEAK_INTERNAL_KEYS or len(self.INTERNAL_API_KEY) < 16:
+            raise ValueError(
+                "INTERNAL_API_KEY must be a secure, non-default string (min 16 chars). "
+                "Generate one with: python -c \"import secrets; print(secrets.token_hex(16))\""
+            )
+        if not self.DEBUG and not self.AI_KEY_ENCRYPTION_KEY:
+            raise ValueError("AI_KEY_ENCRYPTION_KEY must be configured separately in production")
+
+        frontend_origin = self.FRONTEND_URL.rstrip("/")
+        if frontend_origin and frontend_origin not in self.CORS_ORIGINS:
+            self.CORS_ORIGINS = sorted({*self.CORS_ORIGINS, frontend_origin})
+
+        # Additional production-only checks
+        if not self.DEBUG:
+            if self.MINIO_ACCESS_KEY == "minioadmin" or self.MINIO_SECRET_KEY in {"", "minioadmin123"}:
+                raise ValueError("MINIO credentials must not use default values in production")
+            if not self.MINIO_SECURE:
+                raise ValueError("MINIO_SECURE must be true in production")
+            self.CORS_ORIGINS = [origin for origin in self.CORS_ORIGINS if "localhost" not in origin and "127.0.0.1" not in origin]
+            if any(not origin.startswith("https://") for origin in self.CORS_ORIGINS):
+                raise ValueError("Production CORS origins must use HTTPS")
+            if not self.FRONTEND_URL.startswith("https://"):
+                raise ValueError("FRONTEND_URL must use HTTPS in production")
+
+        if self.ALGORITHM != "HS256":
+            raise ValueError("Only the configured HS256 JWT algorithm is supported")
+        return self
+
+    model_config = SettingsConfigDict(env_file=Path(__file__).resolve().parents[3] / ".env", extra="ignore")
+
+
+settings = Settings()

@@ -1,0 +1,220 @@
+name: nhom07-65httt
+
+x-python-build: &python-build
+  context: .
+  dockerfile: python.Dockerfile
+
+x-db-env: &db-env
+  DATABASE_URL: postgresql+asyncpg://${DB_USER:-learning_hub}:${DB_PASSWORD:?Set DB_PASSWORD in .env}@db:5432/${DB_NAME:-learning_hub}
+  DB_SSL_MODE: disable
+
+x-storage-env: &storage-env
+  MINIO_ENDPOINT: minio:9000
+  MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:?Set MINIO_ROOT_USER in .env}
+  MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in .env}
+  MINIO_BUCKET_NAME: learninghubs
+  MINIO_SECURE: "false"
+
+services:
+  db:
+    image: postgres:14-alpine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${DB_HOST_PORT:-5432}:5432"
+    environment:
+      POSTGRES_USER: ${DB_USER:-learning_hub}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      POSTGRES_DB: ${DB_NAME:-learning_hub}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "127.0.0.1:${REDIS_HOST_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  qdrant:
+    image: qdrant/qdrant:v1.12.5
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6333:6333"
+    volumes:
+      - qdrant_storage:/qdrant/storage
+
+  minio:
+    image: cgr.dev/chainguard/minio@sha256:869ca3178831d9f521ea02258a0f0d4fbc1e9f84302e707514e1f861b860865d
+    restart: unless-stopped
+    command: server /data --console-address :9001
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?Set MINIO_ROOT_USER in .env}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in .env}
+    volumes:
+      - minio_data:/data
+
+  ai:
+    image: learning-hub-ai:local
+    build:
+      <<: *python-build
+      target: ai
+    restart: unless-stopped
+    init: true
+    environment:
+      DEBUG: "true"
+      QDRANT_HOST: qdrant
+      REDIS_URL: redis://redis:6379/0
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?Set INTERNAL_API_KEY in .env}
+    depends_on:
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health', timeout=5)"]
+      interval: 30s
+      timeout: 8s
+      retries: 5
+      start_period: 30s
+
+  api:
+    image: learning-hub-api:local
+    build:
+      <<: *python-build
+      target: api
+    restart: unless-stopped
+    init: true
+    ports:
+      - "127.0.0.1:${API_HOST_PORT:-8000}:8000"
+    environment:
+      <<: [*db-env, *storage-env]
+      DEBUG: "true"
+      FRONTEND_URL: http://localhost:${WEB_HOST_PORT:-3000}
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
+      AI_KEY_ENCRYPTION_KEY: ${AI_KEY_ENCRYPTION_KEY:?Set AI_KEY_ENCRYPTION_KEY in .env}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?Set INTERNAL_API_KEY in .env}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      QDRANT_HOST: qdrant
+      AI_SERVICE_URL: http://ai:8001
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      FACEBOOK_APP_ID: ${FACEBOOK_APP_ID:-}
+      FACEBOOK_APP_SECRET: ${FACEBOOK_APP_SECRET:-}
+      VNPAY_MERCHANT_ID: ${VNPAY_MERCHANT_ID:-}
+      VNPAY_HASH_SECRET: ${VNPAY_HASH_SECRET:-}
+      VNPAY_RETURN_URL: ${VNPAY_RETURN_URL:-http://localhost:3000/payment/return}
+      MOMO_PARTNER_CODE: ${MOMO_PARTNER_CODE:-}
+      MOMO_ACCESS_KEY: ${MOMO_ACCESS_KEY:-}
+      MOMO_SECRET_KEY: ${MOMO_SECRET_KEY:-}
+      MOMO_RETURN_URL: ${MOMO_RETURN_URL:-http://localhost:3000/payment/return}
+      ENABLE_MOCK_PAYMENT: ${ENABLE_MOCK_PAYMENT:-true}
+      SMTP_HOST: ${SMTP_HOST:-localhost}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_USE_TLS: ${SMTP_USE_TLS:-false}
+      MAIL_FROM: ${MAIL_FROM:-noreply@learninghub.ai}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ai:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=5)"]
+      interval: 30s
+      timeout: 8s
+      retries: 5
+      start_period: 30s
+
+  worker:
+    image: learning-hub-worker:local
+    build:
+      <<: *python-build
+      target: worker
+    restart: unless-stopped
+    init: true
+    environment:
+      <<: [*db-env, *storage-env]
+      DEBUG: "true"
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      QDRANT_HOST: qdrant
+      AI_SERVICE_URL: http://ai:8001
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?Set INTERNAL_API_KEY in .env}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ai:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "python", "-c", "from celery_app import celery_app; assert celery_app.control.inspect(timeout=5).ping()"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  web:
+    image: learning-hub-web:local
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: /api/v1
+        NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${NEXT_PUBLIC_GOOGLE_CLIENT_ID:-}
+        NEXT_PUBLIC_FACEBOOK_APP_ID: ${NEXT_PUBLIC_FACEBOOK_APP_ID:-}
+        INTERNAL_API_URL: http://api:8000
+    restart: unless-stopped
+    environment:
+      INTERNAL_API_URL: http://api:8000
+    ports:
+      - "127.0.0.1:${WEB_HOST_PORT:-3000}:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/welcome"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  migrate:
+    image: learning-hub-api:local
+    profiles: [tools]
+    environment:
+      <<: *db-env
+      MIGRATION_MODE: "True"
+    command: ["alembic", "upgrade", "head"]
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  redis_data:
+  qdrant_storage:
+  minio_data:

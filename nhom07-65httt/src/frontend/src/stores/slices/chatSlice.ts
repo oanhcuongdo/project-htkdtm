@@ -1,0 +1,281 @@
+import type { StateCreator } from 'zustand'
+import type { AppState, ChatSlice } from '../types'
+import type { ChatSession, Message } from '../../types'
+import { chatApi, type Citation as ApiCitation, type ChatMessage as ApiChatMessage } from '../../services/api'
+
+export const createChatSlice: StateCreator<AppState, [['zustand/devtools', never]], [], ChatSlice> = (set, get) => ({
+  chat: {
+    sessions: [] as ChatSession[],
+    activeSessionId: null,
+    selectSession: async (id) => {
+      set((state) => ({
+        chat: { ...state.chat, activeSessionId: id }
+      }), false, 'chat/selectSession')
+
+      const session = get().chat.sessions.find((s) => s.id === id)
+      if (session && session.messages.length === 0) {
+        try {
+          const res = await chatApi.listMessages(id)
+          const msgs: Message[] = (res.data.items || []).map((m: ApiChatMessage) => ({
+            id: m.id,
+            role: m.role as 'user' | 'assistant',
+            content: m.content,
+            timestamp: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            citations: (m.citations || []).map((c: ApiCitation, i: number) => ({
+              id: `cite-${i}`,
+              label: `[${i + 1}] Page ${c.page_number || '?'}`
+            }))
+          }))
+          set((state) => ({
+            chat: {
+              ...state.chat,
+              sessions: state.chat.sessions.map((s) => (s.id === id ? { ...s, messages: msgs } : s))
+            }
+          }), false, 'chat/loadSessionMessages')
+        } catch {
+          // Ignore if history cannot be loaded
+        }
+      }
+    },
+    sendMessage: async (content, documentIds, courseId, lessonId, tutorMode = 'standard') => {
+      let sessionId = get().chat.activeSessionId
+      if (!sessionId) {
+        await get().chat.addSession(courseId, lessonId)
+        sessionId = get().chat.activeSessionId
+      }
+      if (!sessionId || !content.trim()) return
+
+      const now = new Date()
+      const ts = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
+      const userMsg: Message = {
+        id: `msg-${Date.now()}`,
+        role: 'user',
+        content: content.trim(),
+        timestamp: ts
+      }
+
+      set((state) => ({
+        chat: {
+          ...state.chat,
+          sessions: state.chat.sessions.map((s) =>
+            s.id === sessionId
+              ? { ...s, messages: [...s.messages, userMsg], preview: content.trim().slice(0, 40) }
+              : s
+          )
+        }
+      }), false, 'chat/sendUserMessage')
+
+      // Insert a placeholder assistant message that will be filled token-by-token
+      const streamMsgId = `msg-${Date.now() + 1}`
+      const streamMsg: Message = {
+        id: streamMsgId,
+        role: 'assistant',
+        content: '',
+        timestamp: ts,
+        citations: [],
+      }
+      set((state) => ({
+        chat: {
+          ...state.chat,
+          sessions: state.chat.sessions.map((s) =>
+            s.id === sessionId ? { ...s, messages: [...s.messages, streamMsg] } : s
+          )
+        }
+      }), false, 'chat/receiveAIMessagePlaceholder')
+
+      const appendToken = (tokenText: string) => {
+        set((state) => ({
+          chat: {
+            ...state.chat,
+            sessions: state.chat.sessions.map((s) =>
+              s.id === sessionId
+                ? {
+                    ...s,
+                    messages: s.messages.map((m) =>
+                      m.id === streamMsgId ? { ...m, content: m.content + tokenText } : m
+                    ),
+                  }
+                : s
+            )
+          }
+        }), false, 'chat/streamToken')
+      }
+
+      const applyCitations = (cites: ApiCitation[]) => {
+        set((state) => ({
+          chat: {
+            ...state.chat,
+            sessions: state.chat.sessions.map((s) =>
+              s.id === sessionId
+                ? {
+                    ...s,
+                    messages: s.messages.map((m) =>
+                      m.id === streamMsgId
+                        ? {
+                            ...m,
+                            citations: cites.map((c: ApiCitation, i: number) => ({
+                              id: `cite-${i}`,
+                              label: `[${i + 1}] Page ${c.page_number || '?'}`
+                            })),
+                          }
+                        : m
+                    ),
+                  }
+                : s
+            )
+          }
+        }), false, 'chat/streamCitations')
+      }
+
+      try {
+        const controller = new AbortController()
+        let streamTimeout: ReturnType<typeof setTimeout> | null = setTimeout(() => {
+          // If 15 seconds pass without any tokens arriving, abort SSE and fall back to /ask
+          controller.abort()
+        }, 15000)
+
+        const clearStreamTimeout = () => {
+          if (streamTimeout) {
+            clearTimeout(streamTimeout)
+            streamTimeout = null
+          }
+        }
+
+        const safeAppendToken = (tokenText: string) => {
+          clearStreamTimeout()
+          appendToken(tokenText)
+        }
+
+        try {
+          const result = await chatApi.askStream(
+            {
+              session_id: sessionId,
+              query: content.trim(),
+              course_id: courseId,
+              lesson_id: lessonId,
+              document_ids: documentIds,
+              tutor_mode: tutorMode,
+            },
+            safeAppendToken,
+            (meta) => {
+              clearStreamTimeout()
+              if (meta.citations) applyCitations(meta.citations)
+            },
+            controller.signal,
+          )
+          clearStreamTimeout()
+          if (result.citations?.length) applyCitations(result.citations)
+        } catch (streamErr) {
+          clearStreamTimeout()
+          // Fallback to non-streaming JSON endpoint (older backend / stream unavailable)
+          const res = await chatApi.ask({
+            session_id: sessionId,
+            query: content.trim(),
+            course_id: courseId,
+            lesson_id: lessonId,
+            document_ids: documentIds,
+            tutor_mode: tutorMode,
+          })
+          const data = res.data
+          set((state) => ({
+            chat: {
+              ...state.chat,
+              sessions: state.chat.sessions.map((s) =>
+                s.id === sessionId
+                  ? {
+                      ...s,
+                      messages: s.messages.map((m) =>
+                        m.id === streamMsgId
+                          ? {
+                              ...m,
+                              content: data.answer,
+                              citations: data.citations?.map((c: ApiCitation, i: number) => ({
+                                id: `cite-${i}`,
+                                label: `[${i + 1}] Page ${c.page_number || '?'}`
+                              })) || [],
+                            }
+                          : m
+                      ),
+                    }
+                  : s
+              )
+            }
+          }), false, 'chat/receiveAIMessageFallback')
+          void streamErr
+        }
+      } catch {
+        set((state) => ({
+          chat: {
+            ...state.chat,
+            sessions: state.chat.sessions.map((s) =>
+              s.id === sessionId
+                ? {
+                    ...s,
+                    messages: s.messages.map((m) =>
+                      m.id === streamMsgId
+                        ? {
+                            ...m,
+                            content: 'Xin lỗi, không thể kết nối đến máy chủ AI. Vui lòng thử lại sau giây lát.',
+                          }
+                        : m
+                    ),
+                  }
+                : s
+            )
+          }
+        }), false, 'chat/receiveAIMessageError')
+      }
+    },
+    addSession: async (courseId?: string, lessonId?: string) => {
+      try {
+        const res = await chatApi.createSession({ course_id: courseId, lesson_id: lessonId, title: 'Đoạn chat mới' })
+        const session = res.data
+        const newSession: ChatSession = {
+          id: session.id,
+          title: session.title || 'Đoạn chat mới',
+          course_id: session.course_id || undefined,
+          lesson_id: session.lesson_id || undefined,
+          context_type: session.context_type,
+          preview: '',
+          messages: []
+        }
+        set((state) => ({
+          chat: {
+            ...state.chat,
+            sessions: [newSession, ...state.chat.sessions],
+            activeSessionId: session.id
+          }
+        }), false, 'chat/addSession')
+      } catch {
+        // Fallback offline session
+        const newId = `c-${Date.now()}`
+        const newSession: ChatSession = {
+          id: newId,
+          title: 'Đoạn chat mới',
+          preview: '',
+          messages: []
+        }
+        set((state) => ({
+          chat: {
+            ...state.chat,
+            sessions: [newSession, ...state.chat.sessions],
+            activeSessionId: newId
+          }
+        }), false, 'chat/addSessionFallback')
+      }
+    },
+    deleteSession: (id) => {
+      const remaining = get().chat.sessions.filter((s) => s.id !== id)
+      set((state) => ({
+        chat: {
+          ...state.chat,
+          sessions: remaining,
+          activeSessionId: state.chat.activeSessionId === id
+            ? remaining[0]?.id ?? null
+            : state.chat.activeSessionId
+        }
+      }), false, 'chat/deleteSession')
+      chatApi.deleteSession(id).catch(() => {})
+    }
+  }
+})

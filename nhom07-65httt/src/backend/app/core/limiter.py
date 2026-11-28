@@ -1,0 +1,44 @@
+"""Rate limiting configuration using slowapi."""
+
+from fastapi import Request
+from fastapi.responses import JSONResponse
+from slowapi import Limiter
+from slowapi.errors import RateLimitExceeded
+
+from app.core.config import settings
+
+
+def _get_real_ip(request: Request) -> str:
+    """Use the proxy-normalized peer address; never trust a client-supplied XFF."""
+    return request.client.host if request.client else "unknown"
+
+
+def _get_storage_uri() -> str:
+    uri = settings.REDIS_URL
+    if uri.startswith("rediss://") and "ssl_cert_reqs" not in uri:
+        sep = "&" if "?" in uri else "?"
+        return f"{uri}{sep}ssl_cert_reqs=none"
+    return uri
+
+
+limiter = Limiter(
+    key_func=_get_real_ip,
+    default_limits=["100/minute"],
+    storage_uri=_get_storage_uri(),
+    storage_options={"socket_connect_timeout": 5, "socket_timeout": 5},
+    # Fall back to in-memory limiting if Redis is temporarily unavailable
+    # so auth/API endpoints do not fail with HTTP 500.
+    in_memory_fallback_enabled=True,
+    swallow_errors=True,
+)
+
+
+def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+    """Custom response handler for rate limit exceeded errors."""
+    return JSONResponse(
+        status_code=429,
+        content={
+            "error": "rate_limit_exceeded",
+            "message": "Too many requests. Please try again later.",
+        },
+    )

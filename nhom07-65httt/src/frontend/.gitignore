@@ -1,0 +1,9 @@
+.next/
+out/
+dist/
+next-env.d.ts
+tsconfig.tsbuildinfo
+coverage/
+e2e/reports/
+playwright-report/
+test-results/

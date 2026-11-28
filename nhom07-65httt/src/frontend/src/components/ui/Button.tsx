@@ -1,0 +1,97 @@
+import { forwardRef, type ButtonHTMLAttributes, type ReactNode, type ElementType } from 'react'
+import { cn } from '../../utils/cn'
+
+type Variant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'gradient'
+type Size = 'sm' | 'md' | 'lg' | 'icon'
+
+interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'type'> {
+  variant?: Variant
+  size?: Size
+  responsiveSize?: boolean
+  loading?: boolean
+  icon?: ReactNode
+  iconRight?: ReactNode
+  type?: 'button' | 'submit' | 'reset'
+  fullWidth?: boolean
+  fullWidthMobile?: boolean
+  as?: ElementType
+}
+
+const variants: Record<Variant, string> = {
+  primary:
+    'bg-primary text-primary-foreground hover:bg-primary/95 border border-primary/10 shadow-soft hover:shadow-glow active:bg-primary/90 transition-all duration-150',
+  secondary:
+    'bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border shadow-sm transition-all duration-150',
+  outline:
+    'border border-border bg-surface-elevated text-foreground hover:bg-muted hover:border-foreground/20 shadow-sm transition-all duration-150',
+  ghost:
+    'bg-transparent text-foreground hover:bg-muted/70 transition-all duration-150',
+  danger:
+    'bg-destructive text-destructive-foreground hover:bg-destructive/95 border border-destructive/10 shadow-soft transition-all duration-150',
+  gradient:
+    'bg-primary text-primary-foreground shadow-soft hover:shadow-glow active:bg-primary/90 transition-all duration-150'
+}
+
+const sizes: Record<Size, string> = {
+  sm: 'h-8 px-3 text-xs rounded-md gap-1.5',
+  md: 'h-9 px-4 text-sm rounded-md gap-2',
+  lg: 'h-11 px-5 text-sm rounded-lg gap-2',
+  icon: 'h-9 w-9 rounded-md gap-0'
+}
+
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
+  (
+    {
+      variant = 'primary',
+      size = 'md',
+      responsiveSize = false,
+      disabled = false,
+      loading = false,
+      icon,
+      iconRight,
+      children,
+      type = 'button',
+      fullWidth = false,
+      fullWidthMobile = false,
+      className = '',
+      as: Component = 'button',
+      ...rest
+    },
+    ref
+  ) => {
+    const sizeClasses = responsiveSize
+      ? 'h-8 px-3 text-xs rounded-lg gap-1.5 sm:h-9 sm:px-4 sm:text-sm sm:rounded-lg sm:gap-2'
+      : sizes[size]
+
+    return (
+      <Component
+        ref={ref}
+        type={Component === 'button' ? type : undefined}
+        disabled={disabled || loading}
+        className={cn(
+          'inline-flex items-center justify-center font-medium',
+          'active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 disabled:hover:shadow-none',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background',
+          variants[variant],
+          sizeClasses,
+          fullWidth && 'w-full',
+          fullWidthMobile && 'w-full sm:w-auto',
+          className
+        )}
+        {...rest}
+      >
+        {loading ? (
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+        ) : icon ? (
+          <span className="shrink-0 [&>svg]:h-4 [&>svg]:w-4">{icon}</span>
+        ) : null}
+        {children && <span className="inline-flex items-center truncate">{children}</span>}
+        {iconRight && !loading && (
+          <span className="shrink-0 [&>svg]:h-4 [&>svg]:w-4">{iconRight}</span>
+        )}
+      </Component>
+    )
+  }
+)
+
+Button.displayName = 'Button'

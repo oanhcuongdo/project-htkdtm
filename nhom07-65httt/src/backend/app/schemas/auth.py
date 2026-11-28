@@ -1,0 +1,89 @@
+from datetime import datetime
+from uuid import UUID
+
+from pydantic import BaseModel, EmailStr, Field
+
+
+class RegisterRequest(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=8)
+    full_name: str | None = Field(default=None, max_length=255)
+    # Keep lecturer parseable for legacy clients; AuthService still rejects
+    # public lecturer registration and requires administrator provisioning.
+    role: str = Field(default="student", pattern="^(student|lecturer)$")
+
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class GoogleLoginRequest(BaseModel):
+    id_token: str = Field(min_length=20, max_length=8192)
+
+
+class FacebookLoginRequest(BaseModel):
+    access_token: str = Field(min_length=20, max_length=8192)
+
+
+class RefreshRequest(BaseModel):
+    refresh_token: str | None = None
+
+
+class LogoutRequest(BaseModel):
+    refresh_token: str | None = None
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    refresh_token: str | None = None
+
+
+class QuotaResponse(BaseModel):
+    storage_limit_mb: int
+    storage_used_mb: float
+    video_limit: int
+    video_used: int
+    token_limit: int
+    token_used: int
+
+
+class AuthUserResponse(BaseModel):
+    id: UUID
+    email: EmailStr
+    full_name: str | None = None
+    avatar_url: str | None = None
+    role: str
+    oauth_provider: str | None = None
+    created_at: datetime | None = None
+    quota: QuotaResponse | None = None
+
+
+class AuthResponse(BaseModel):
+    user: AuthUserResponse
+    token: TokenResponse
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    password: str = Field(min_length=8)
+
+
+class MessageResponse(BaseModel):
+    message: str
+
+
+class UpdateProfileRequest(BaseModel):
+    full_name: str | None = Field(default=None, max_length=255)
+    avatar_url: str | None = Field(default=None, max_length=500)
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(min_length=1)
+    new_password: str = Field(min_length=8, max_length=128)
+

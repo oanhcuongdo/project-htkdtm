@@ -1,0 +1,166 @@
+{
+  "schema_version": "1.0",
+  "content_note": "Original SmartEdu demonstration content. Not copied from Udemy or another course platform.",
+  "courses": [
+    {
+      "course_id": "internal:python-foundations",
+      "source_name": "smartedu_internal",
+      "source_course_id": "python-foundations",
+      "title": "Python Foundations: From Data to Small Programs",
+      "description": "Learn Python values, control flow, collections, functions, and file handling by building small, testable programs.",
+      "level": "Beginner",
+      "skills": ["Python", "Programming fundamentals", "Problem solving"],
+      "prerequisites": ["Basic computer use"],
+      "duration_minutes": 300,
+      "price_amount": null,
+      "price_currency": null,
+      "offer_type": "INTERNAL",
+      "quality_status": "needs_review",
+      "lessons": [
+        {"title": "Values, expressions, and branches", "objectives": ["Name basic Python types", "Choose a branch with if/elif/else"], "activities": ["Trace expressions", "Write a unit converter"]},
+        {"title": "Collections and iteration", "objectives": ["Choose list, tuple, or dictionary", "Process a collection with a loop"], "activities": ["Summarize a list of scores", "Count word frequencies"]},
+        {"title": "Functions and files", "objectives": ["Write a function with clear inputs and outputs", "Read a UTF-8 text file safely"], "activities": ["Split a script into functions", "Build a small CSV summary"]}
+      ],
+      "quiz": [
+        {"question": "Which value is the Boolean false in Python?", "options": ["False", "false", "0.0 only", "None only"], "answer_index": 0, "explanation": "Python Boolean literals are capitalized."},
+        {"question": "What does len([4, 7, 9]) return?", "options": ["2", "3", "4", "9"], "answer_index": 1, "explanation": "The list contains three elements."},
+        {"question": "Which keyword begins a function definition?", "options": ["func", "define", "def", "lambda"], "answer_index": 2, "explanation": "A named function is declared with def."},
+        {"question": "What does range(3) produce when iterated?", "options": ["1, 2, 3", "0, 1, 2", "0, 1, 2, 3", "3 only"], "answer_index": 1, "explanation": "range starts at zero by default and excludes its stop value."},
+        {"question": "Which collection stores key-value pairs?", "options": ["list", "dict", "set", "str"], "answer_index": 1, "explanation": "A dictionary maps keys to values."},
+        {"question": "What is the result of 7 // 2?", "options": ["3", "3.5", "4", "1"], "answer_index": 0, "explanation": "Floor division returns the integer quotient."},
+        {"question": "Which block handles a matching exception?", "options": ["catch", "except", "rescue", "finally only"], "answer_index": 1, "explanation": "Python uses except after try."},
+        {"question": "What does a function return if it has no return statement?", "options": ["0", "False", "An empty string", "None"], "answer_index": 3, "explanation": "The implicit return value is None."},
+        {"question": "Which mode opens a file for reading text?", "options": ["r", "w", "a", "x"], "answer_index": 0, "explanation": "The r mode opens an existing file for reading."},
+        {"question": "Why use a with statement for files?", "options": ["It sorts file rows", "It closes the file when the block exits", "It encrypts the file", "It changes the encoding automatically"], "answer_index": 1, "explanation": "The context manager handles cleanup even when an error occurs."}
+      ]
+    },
+    {
+      "course_id": "internal:sql-analytics",
+      "source_name": "smartedu_internal",
+      "source_course_id": "sql-analytics",
+      "title": "SQL for Practical Data Analysis",
+      "description": "Use SELECT, filtering, joins, aggregation, and window functions to answer questions from relational data.",
+      "level": "Beginner",
+      "skills": ["SQL", "Data analysis", "Relational databases"],
+      "prerequisites": ["Comfort with tables and columns"],
+      "duration_minutes": 360,
+      "price_amount": null,
+      "price_currency": null,
+      "offer_type": "INTERNAL",
+      "quality_status": "needs_review",
+      "lessons": [
+        {"title": "Filtering and sorting", "objectives": ["Select named columns", "Filter rows with WHERE"], "activities": ["Find recent orders", "Sort a product report"]},
+        {"title": "Joins and aggregation", "objectives": ["Join related tables", "Group rows and calculate aggregates"], "activities": ["Join customers to orders", "Calculate monthly totals"]},
+        {"title": "Window functions", "objectives": ["Add rankings without collapsing rows", "Compare a row with its partition"], "activities": ["Rank products by category", "Calculate a running total"]}
+      ],
+      "quiz": [
+        {"question": "Which clause filters rows before grouping?", "options": ["WHERE", "HAVING", "ORDER BY", "LIMIT"], "answer_index": 0, "explanation": "WHERE filters input rows before aggregation."},
+        {"question": "Which clause filters groups after aggregation?", "options": ["FROM", "WHERE", "HAVING", "JOIN"], "answer_index": 2, "explanation": "HAVING evaluates grouped results."},
+        {"question": "What does COUNT(*) count?", "options": ["Only non-null values in the first column", "Rows", "Distinct rows only", "Columns"], "answer_index": 1, "explanation": "COUNT(*) counts rows regardless of column nulls."},
+        {"question": "What is the default effect of INNER JOIN?", "options": ["Keep only matching rows", "Keep all left rows", "Keep all rows from both sides", "Remove duplicate columns"], "answer_index": 0, "explanation": "An inner join returns rows with a match on both sides."},
+        {"question": "Which key uniquely identifies a row in a table?", "options": ["Foreign key", "Primary key", "Index hint", "Alias"], "answer_index": 1, "explanation": "A primary key identifies each row uniquely."},
+        {"question": "Which aggregate returns the arithmetic mean?", "options": ["SUM", "AVG", "MEDIAN", "MEAN"], "answer_index": 1, "explanation": "AVG is the standard SQL aggregate for the arithmetic mean."},
+        {"question": "What does GROUP BY do?", "options": ["Sorts rows alphabetically", "Combines rows with equal grouping values for aggregation", "Filters nulls", "Creates a new table"], "answer_index": 1, "explanation": "GROUP BY forms groups used by aggregate calculations."},
+        {"question": "Which condition correctly checks for a missing value?", "options": ["= NULL", "IS NULL", "== NULL", "IN NULL"], "answer_index": 1, "explanation": "SQL uses IS NULL for null checks."},
+        {"question": "Which window function can assign a rank within a category?", "options": ["ROW_NUMBER", "GROUP BY", "COUNT(*)", "COALESCE"], "answer_index": 0, "explanation": "ROW_NUMBER assigns sequential numbers within each partition."},
+        {"question": "Why can a join increase the row count?", "options": ["The database duplicates every row", "A key may match multiple rows on the other side", "ORDER BY adds rows", "NULL values become rows"], "answer_index": 1, "explanation": "One-to-many or many-to-many matches produce multiple output rows."}
+      ]
+    },
+    {
+      "course_id": "internal:web-frontend",
+      "source_name": "smartedu_internal",
+      "source_course_id": "web-frontend",
+      "title": "Accessible Web Interface Fundamentals",
+      "description": "Build semantic, responsive web interfaces with HTML, CSS, JavaScript, keyboard access, and practical accessibility checks.",
+      "level": "Beginner",
+      "skills": ["HTML", "CSS", "JavaScript", "Web accessibility"],
+      "prerequisites": ["Basic file and browser use"],
+      "duration_minutes": 420,
+      "price_amount": null,
+      "price_currency": null,
+      "offer_type": "INTERNAL",
+      "quality_status": "needs_review",
+      "lessons": [
+        {"title": "Semantic HTML and forms", "objectives": ["Choose semantic elements by purpose", "Associate labels with form controls"], "activities": ["Build an article page", "Create a labeled signup form"]},
+        {"title": "Responsive CSS", "objectives": ["Use the box model", "Adapt a layout to viewport width"], "activities": ["Create a card grid", "Add a mobile breakpoint"]},
+        {"title": "JavaScript and accessibility", "objectives": ["Handle a user event", "Check keyboard operation and focus"], "activities": ["Build a disclosure widget", "Audit a form with keyboard only"]}
+      ],
+      "quiz": [
+        {"question": "Which element represents the main content of a page?", "options": ["<main>", "<span>", "<b>", "<small>"], "answer_index": 0, "explanation": "The main element identifies the page's primary content."},
+        {"question": "How should a form label be connected to an input?", "options": ["Match label for to input id", "Place text after the input only", "Use the title attribute only", "Use CSS content"], "answer_index": 0, "explanation": "The label's for value should match the control's id."},
+        {"question": "What does CSS box-sizing: border-box do?", "options": ["Includes padding and border in declared width", "Removes the border", "Sets width to content only", "Centers all children"], "answer_index": 0, "explanation": "Border-box includes padding and border in the element's declared dimensions."},
+        {"question": "Which CSS rule is commonly used for a responsive breakpoint?", "options": ["@media", "@font-face", "@import only", "@keyframes"], "answer_index": 0, "explanation": "Media queries apply styles based on viewport or device conditions."},
+        {"question": "What is keyboard focus?", "options": ["The control that currently receives keyboard input", "A browser zoom setting", "A CSS color name", "A network request"], "answer_index": 0, "explanation": "Focus indicates the currently active interactive element."},
+        {"question": "Which attribute provides text alternative for an informative image?", "options": ["alt", "srcset", "loading", "decoding"], "answer_index": 0, "explanation": "The alt attribute provides an alternative text description."},
+        {"question": "Which event commonly handles a button activation in JavaScript?", "options": ["click", "hovered", "paint", "compile"], "answer_index": 0, "explanation": "The click event is fired when a user activates a button."},
+        {"question": "Why should heading levels reflect document structure?", "options": ["They create a navigable content outline", "They guarantee larger text", "They replace all landmarks", "They prevent CSS loading"], "answer_index": 0, "explanation": "A logical heading hierarchy supports navigation and comprehension."},
+        {"question": "What should happen to visible focus for keyboard users?", "options": ["It should remain perceivable", "It should always be removed", "It should appear only on mouse click", "It should be replaced with animation"], "answer_index": 0, "explanation": "A visible focus indicator helps users track keyboard position."},
+        {"question": "Which HTML element is best for a page navigation region?", "options": ["<nav>", "<aside> for every link", "<footer> only", "<label>"], "answer_index": 0, "explanation": "The nav landmark identifies a major navigation section."}
+      ]
+    },
+    {
+      "course_id": "internal:python-rest-api",
+      "source_name": "smartedu_internal",
+      "source_course_id": "python-rest-api",
+      "title": "Designing a Small REST API with Python",
+      "description": "Model resources, validate requests, return useful HTTP status codes, and protect a small API with tests and clear boundaries.",
+      "level": "Intermediate",
+      "skills": ["Python", "HTTP", "REST API design", "Testing"],
+      "prerequisites": ["Python functions and dictionaries", "Basic HTTP concepts"],
+      "duration_minutes": 480,
+      "price_amount": null,
+      "price_currency": null,
+      "offer_type": "INTERNAL",
+      "quality_status": "needs_review",
+      "lessons": [
+        {"title": "Resources and HTTP semantics", "objectives": ["Name resources with stable URLs", "Choose methods for read and write operations"], "activities": ["Sketch a course resource API", "Map operations to HTTP methods"]},
+        {"title": "Validation and errors", "objectives": ["Validate request fields", "Return consistent error responses"], "activities": ["Reject malformed payloads", "Design a field-error response"]},
+        {"title": "Testing and safe configuration", "objectives": ["Test routes without a live database", "Load secrets from environment configuration"], "activities": ["Write API contract tests", "Add a dry-run configuration check"]}
+      ],
+      "quiz": [
+        {"question": "Which HTTP method is conventionally safe for reading a resource?", "options": ["GET", "POST", "PATCH", "DELETE"], "answer_index": 0, "explanation": "GET retrieves a representation and should not change server state."},
+        {"question": "Which status code commonly signals successful resource creation?", "options": ["201", "301", "403", "500"], "answer_index": 0, "explanation": "201 Created indicates that a resource was created."},
+        {"question": "What does an idempotent operation mean?", "options": ["Repeating it has the same intended effect", "It never returns a response", "It always creates a new resource", "It skips validation"], "answer_index": 0, "explanation": "Repeated equivalent requests do not add further effects after the first."},
+        {"question": "Where should an API validate a request body?", "options": ["At the boundary before business logic", "Only in the browser", "After writing to storage", "Only in documentation"], "answer_index": 0, "explanation": "Boundary validation prevents malformed input from reaching core logic."},
+        {"question": "Which status code fits a well-formed request with invalid field values?", "options": ["400", "200", "204", "304"], "answer_index": 0, "explanation": "400 Bad Request is appropriate for invalid client input."},
+        {"question": "Why keep API error responses consistent?", "options": ["Clients can handle errors predictably", "It removes the need for validation", "It makes every request succeed", "It hides status codes"], "answer_index": 0, "explanation": "A stable error shape simplifies client and test behavior."},
+        {"question": "Where should a local secret be stored?", "options": ["Environment or secret manager", "Source code constant", "Public README", "Course title"], "answer_index": 0, "explanation": "Secrets should be supplied through protected configuration."},
+        {"question": "What should a test double replace?", "options": ["A boundary dependency not needed for the behavior under test", "The assertion", "All production logic", "The API contract"], "answer_index": 0, "explanation": "A focused test double isolates external dependencies while exercising real application logic."},
+        {"question": "What does PATCH commonly represent?", "options": ["A partial update", "A safe read", "A permanent redirect", "A DNS lookup"], "answer_index": 0, "explanation": "PATCH applies partial modifications to a resource."},
+        {"question": "Why avoid returning stack traces to API clients?", "options": ["They can expose implementation details", "They improve validation", "They are required for JSON", "They are HTTP headers"], "answer_index": 0, "explanation": "Internal traces belong in protected logs, not public responses."}
+      ]
+    },
+    {
+      "course_id": "internal:data-quality",
+      "source_name": "smartedu_internal",
+      "source_course_id": "data-quality",
+      "title": "Data Quality Checks for Analytics Pipelines",
+      "description": "Define measurable data expectations, detect nulls and duplicates, track lineage, and publish trustworthy pipeline reports.",
+      "level": "Intermediate",
+      "skills": ["Data quality", "ETL", "Python", "Data validation"],
+      "prerequisites": ["CSV or table familiarity", "Basic Python or SQL"],
+      "duration_minutes": 390,
+      "price_amount": null,
+      "price_currency": null,
+      "offer_type": "INTERNAL",
+      "quality_status": "needs_review",
+      "lessons": [
+        {"title": "Contracts and completeness", "objectives": ["Write field-level expectations", "Measure null coverage"], "activities": ["Define required columns", "Create a null-rate report"]},
+        {"title": "Validity and uniqueness", "objectives": ["Validate ranges and types", "Find exact and near duplicates"], "activities": ["Check numeric bounds", "Review duplicate candidates"]},
+        {"title": "Lineage and release gates", "objectives": ["Track source and transformation batches", "Prevent unapproved rows from release"], "activities": ["Build a manifest", "Add a release validation gate"]}
+      ],
+      "quiz": [
+        {"question": "What does a completeness check measure?", "options": ["Whether required values are present", "Whether the server is fast", "Whether titles are popular", "Whether columns are sorted"], "answer_index": 0, "explanation": "Completeness measures presence against required data expectations."},
+        {"question": "What is a data contract?", "options": ["An explicit agreement about schema and expectations", "A CSV filename", "A database password", "A chart theme"], "answer_index": 0, "explanation": "A contract states structure and quality expectations between producers and consumers."},
+        {"question": "What is a false positive in duplicate detection?", "options": ["Different records incorrectly flagged as duplicates", "A missing column", "A valid exact match", "A failed file read"], "answer_index": 0, "explanation": "Similarity alone can flag distinct records, so candidates need review."},
+        {"question": "How should an unknown price be represented?", "options": ["Null", "Zero", "Negative one", "Average price"], "answer_index": 0, "explanation": "Unknown is distinct from a real zero price."},
+        {"question": "What should a raw batch manifest record?", "options": ["Input identity, timestamps, counts, and status", "Only the largest row", "A synthetic success rate", "Database secrets"], "answer_index": 0, "explanation": "A manifest supports traceability and run auditing."},
+        {"question": "What makes a release reproducible?", "options": ["Versioned inputs and transformation metadata", "Randomly editing output", "Overwriting all batches", "Dropping source fields"], "answer_index": 0, "explanation": "Versions and lineage allow the dataset to be traced and rebuilt."},
+        {"question": "Which check is suitable for a rating field?", "options": ["Validate numeric type and documented range", "Replace every missing value with 5", "Sort the text alphabetically", "Infer the rating from title"], "answer_index": 0, "explanation": "Type and range checks detect invalid values without inventing data."},
+        {"question": "What is lineage?", "options": ["The documented origin and transformations of data", "The order of CSV columns", "A chart legend", "A storage size"], "answer_index": 0, "explanation": "Lineage records where data came from and how it changed."},
+        {"question": "Should near-duplicate titles be merged automatically?", "options": ["No, flag them for review", "Yes, title similarity proves identity", "Only if both are long", "Only after deleting one"], "answer_index": 0, "explanation": "Similar titles may refer to different editions or courses."},
+        {"question": "What should happen when release validation fails?", "options": ["Stop release and report the failed rule", "Silently remove the rule", "Mark rows approved", "Change the reported count"], "answer_index": 0, "explanation": "A gate should prevent invalid or unapproved data from being released."}
+      ]
+    }
+  ]
+}
