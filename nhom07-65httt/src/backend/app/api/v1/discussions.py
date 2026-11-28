@@ -1,0 +1,575 @@
+from typing import List
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
+from app.core.cache import RedisCache
+from app.core.database import get_db
+from app.dependencies.auth import get_current_user
+from app.dependencies.course_auth import get_lesson_with_course, verify_lesson_access
+from app.models import Discussion, Notification
+from app.models.user import User
+from app.schemas.course_content import (
+    DiscussionCreate,
+    DiscussionResponse,
+    DiscussionUpdate,
+)
+
+router = APIRouter(prefix="/lessons/{lesson_id}/discussions", tags=["Discussions"])
+
+
+async def _get_authorized_discussion(
+    lesson_id: UUID,
+    post_id: UUID,
+    db: AsyncSession,
+    current_user: User,
+) -> tuple[Discussion, object, object]:
+    """Load a post only in its URL lesson and enforce lesson access."""
+    lesson, course = await get_lesson_with_course(db, lesson_id)
+    await verify_lesson_access(lesson, course, current_user, db)
+    result = await db.execute(
+        select(Discussion)
+        .where(Discussion.id == post_id, Discussion.lesson_id == lesson_id)
+        .options(selectinload(Discussion.user))
+    )
+    discussion = result.scalar_one_or_none()
+    if not discussion:
+        raise HTTPException(status_code=404, detail="Discussion not found")
+    return discussion, lesson, course
+
+
+@router.get("", response_model=List[DiscussionResponse])
+async def list_discussions(
+    lesson_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    lesson, course = await get_lesson_with_course(db, lesson_id)
+    await verify_lesson_access(lesson, course, current_user, db)
+
+    # Eager load Discussion.user and replies.user to completely eliminate N+1 queries
+    result = await db.execute(
+        select(Discussion)
+        .where(Discussion.lesson_id == lesson_id, Discussion.parent_id.is_(None))
+        .options(
+            selectinload(Discussion.user),
+            selectinload(Discussion.replies).selectinload(Discussion.user)
+        )
+        .order_by(Discussion.is_pinned.desc(), Discussion.created_at.desc())
+    )
+    discussions = result.scalars().all()
+
+    response = []
+    for d in discussions:
+        reply_count = len(d.replies) if d.replies else 0
+
+        replies_response = []
+        if d.replies:
+            for r in d.replies:
+                reply_user = r.user
+                replies_response.append({
+                    "id": r.id,
+                    "lesson_id": r.lesson_id,
+                    "user_id": r.user_id,
+                    "user_name": reply_user.full_name if reply_user else None,
+                    "user_avatar": reply_user.avatar_url if reply_user else None,
+                    "parent_id": r.parent_id,
+                    "content": r.content,
+                    "is_pinned": r.is_pinned,
+                    "is_answer": r.is_answer,
+                    "upvotes": r.upvotes,
+                    "reply_count": 0,
+                    "created_at": r.created_at,
+                    "updated_at": r.updated_at,
+                    "replies": []
+                })
+
+        response.append({
+            "id": d.id,
+            "lesson_id": d.lesson_id,
+            "user_id": d.user_id,
+            "user_name": d.user.full_name if d.user else None,
+            "user_avatar": d.user.avatar_url if d.user else None,
+            "parent_id": d.parent_id,
+            "content": d.content,
+            "is_pinned": d.is_pinned,
+            "is_answer": d.is_answer,
+            "upvotes": d.upvotes,
+            "reply_count": reply_count,
+            "created_at": d.created_at,
+            "updated_at": d.updated_at,
+            "replies": replies_response
+        })
+    return response
+
+
+@router.post("", response_model=DiscussionResponse, status_code=status.HTTP_201_CREATED)
+async def create_discussion(
+    lesson_id: UUID,
+    discussion_data: DiscussionCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    lesson, course = await get_lesson_with_course(db, lesson_id)
+    await verify_lesson_access(lesson, course, current_user, db)
+
+    if discussion_data.parent_id:
+        parent = (await db.execute(
+            select(Discussion).where(
+                Discussion.id == discussion_data.parent_id,
+                Discussion.lesson_id == lesson_id,
+            )
+        )).scalar_one_or_none()
+        if not parent:
+            raise HTTPException(status_code=400, detail="Parent discussion is invalid")
+
+    discussion = Discussion(
+        lesson_id=lesson_id,
+        user_id=current_user.id,
+        parent_id=discussion_data.parent_id,
+        content=discussion_data.content
+    )
+    db.add(discussion)
+
+    if discussion_data.parent_id:
+        parent_author = (await db.execute(
+            select(Discussion.user_id).where(Discussion.id == discussion_data.parent_id)
+        )).scalar_one_or_none()
+        if parent_author and parent_author != current_user.id:
+            db.add(Notification(
+                user_id=parent_author,
+                title=f"Phản hồi mới trong bài '{lesson.title}'",
+                detail=f"{current_user.full_name or 'Một người dùng'} đã phản hồi thảo luận của bạn trong khóa '{course.title}'.",
+                type="discussion",
+                related_id=course.id,
+                related_type="course",
+            ))
+    elif course.lecturer_id and course.lecturer_id != current_user.id:
+        db.add(Notification(
+            user_id=course.lecturer_id,
+            title=f"Thảo luận mới: {lesson.title}",
+            detail=f"{current_user.full_name or 'Học viên'} đã đặt câu hỏi trong khóa '{course.title}'.",
+            type="discussion",
+            related_id=course.id,
+            related_type="course",
+        ))
+
+    await db.commit()
+    await db.refresh(discussion)
+
+    return {
+        "id": discussion.id,
+        "lesson_id": discussion.lesson_id,
+        "user_id": discussion.user_id,
+        "user_name": current_user.full_name,
+        "user_avatar": current_user.avatar_url,
+        "parent_id": discussion.parent_id,
+        "content": discussion.content,
+        "is_pinned": discussion.is_pinned,
+        "is_answer": discussion.is_answer,
+        "upvotes": discussion.upvotes,
+        "reply_count": 0,
+        "created_at": discussion.created_at,
+        "updated_at": discussion.updated_at,
+        "replies": []
+    }
+
+
+@router.put("/posts/{post_id}", response_model=DiscussionResponse)
+async def update_discussion(
+    lesson_id: UUID,
+    post_id: UUID,
+    discussion_data: DiscussionUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    discussion, _, _ = await _get_authorized_discussion(lesson_id, post_id, db, current_user)
+
+    if discussion.user_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    if discussion_data.content is not None:
+        discussion.content = discussion_data.content
+
+    await db.commit()
+    await db.refresh(discussion)
+
+    user_result = await db.execute(select(User).where(User.id == discussion.user_id))
+    user = user_result.scalar_one_or_none()
+
+    return {
+        "id": discussion.id,
+        "lesson_id": discussion.lesson_id,
+        "user_id": discussion.user_id,
+        "user_name": user.full_name if user else None,
+        "user_avatar": user.avatar_url if user else None,
+        "parent_id": discussion.parent_id,
+        "content": discussion.content,
+        "is_pinned": discussion.is_pinned,
+        "is_answer": discussion.is_answer,
+        "upvotes": discussion.upvotes,
+        "reply_count": 0,
+        "created_at": discussion.created_at,
+        "updated_at": discussion.updated_at,
+        "replies": []
+    }
+
+
+@router.put("/pin/{post_id}", response_model=DiscussionResponse)
+async def pin_discussion(
+    lesson_id: UUID,
+    post_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    discussion, _, course = await _get_authorized_discussion(lesson_id, post_id, db, current_user)
+    if course.lecturer_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only course instructor or admin can pin a discussion")
+
+    discussion.is_pinned = not discussion.is_pinned
+    await db.commit()
+    await db.refresh(discussion)
+
+    return {
+        "id": discussion.id,
+        "lesson_id": discussion.lesson_id,
+        "user_id": discussion.user_id,
+        "user_name": discussion.user.full_name if discussion.user else None,
+        "user_avatar": discussion.user.avatar_url if discussion.user else None,
+        "parent_id": discussion.parent_id,
+        "content": discussion.content,
+        "is_pinned": discussion.is_pinned,
+        "is_answer": discussion.is_answer,
+        "upvotes": discussion.upvotes,
+        "reply_count": 0,
+        "created_at": discussion.created_at,
+        "updated_at": discussion.updated_at,
+        "replies": []
+    }
+
+
+@router.put("/{post_id}", response_model=DiscussionResponse)
+async def update_discussion_legacy(
+    lesson_id: UUID,
+    post_id: UUID,
+    discussion_data: DiscussionUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return await update_discussion(lesson_id, post_id, discussion_data, db, current_user)
+
+
+@router.delete("/posts/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_discussion(
+    lesson_id: UUID,
+    post_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    discussion, _, _ = await _get_authorized_discussion(lesson_id, post_id, db, current_user)
+
+    if discussion.user_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    await db.delete(discussion)
+    await db.commit()
+
+
+@router.post("/posts/{post_id}/upvote", response_model=DiscussionResponse)
+async def upvote_discussion(
+    lesson_id: UUID,
+    post_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    cache = RedisCache()
+    upvote_key = f"upvote:{post_id}:{current_user.id}"
+    already_upvoted = await cache.get(upvote_key)
+    if already_upvoted:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You have already upvoted this post"
+        )
+
+    discussion, _, _ = await _get_authorized_discussion(lesson_id, post_id, db, current_user)
+
+    discussion.upvotes += 1
+    await db.commit()
+    await db.refresh(discussion)
+    await cache.set(upvote_key, True, ttl=86400 * 30)
+
+    return {
+        "id": discussion.id,
+        "lesson_id": discussion.lesson_id,
+        "user_id": discussion.user_id,
+        "user_name": discussion.user.full_name if discussion.user else None,
+        "user_avatar": discussion.user.avatar_url if discussion.user else None,
+        "parent_id": discussion.parent_id,
+        "content": discussion.content,
+        "is_pinned": discussion.is_pinned,
+        "is_answer": discussion.is_answer,
+        "upvotes": discussion.upvotes,
+        "reply_count": 0,
+        "created_at": discussion.created_at,
+        "updated_at": discussion.updated_at,
+        "replies": []
+    }
+
+
+@router.post("/posts/{post_id}/mark-answer", response_model=DiscussionResponse)
+async def toggle_mark_answer(
+    lesson_id: UUID,
+    post_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    discussion, lesson, course = await _get_authorized_discussion(lesson_id, post_id, db, current_user)
+    if course.lecturer_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only course instructor or admin can mark official answer")
+
+    discussion.is_answer = not discussion.is_answer
+    await db.commit()
+    await db.refresh(discussion)
+
+    return {
+        "id": discussion.id,
+        "lesson_id": discussion.lesson_id,
+        "user_id": discussion.user_id,
+        "user_name": discussion.user.full_name if discussion.user else None,
+        "user_avatar": discussion.user.avatar_url if discussion.user else None,
+        "parent_id": discussion.parent_id,
+        "content": discussion.content,
+        "is_pinned": discussion.is_pinned,
+        "is_answer": discussion.is_answer,
+        "upvotes": discussion.upvotes,
+        "reply_count": 0,
+        "created_at": discussion.created_at,
+        "updated_at": discussion.updated_at,
+        "replies": []
+    }
+
+
+course_discussions_router = APIRouter(prefix="/courses/{course_id}/discussions", tags=["Discussions"])
+
+
+@course_discussions_router.get("")
+async def list_course_discussions(
+    course_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    from app.dependencies.course_auth import get_course_or_404, verify_course_access
+    from app.models import Section, Lesson
+
+    course = await get_course_or_404(db, course_id)
+    has_access = await verify_course_access(course, current_user, db)
+    if not has_access:
+        raise HTTPException(status_code=403, detail="Active enrollment required")
+
+    result = await db.execute(
+        select(Discussion)
+        .join(Lesson, Lesson.id == Discussion.lesson_id)
+        .join(Section, Section.id == Lesson.section_id)
+        .where(Section.course_id == course_id, Discussion.parent_id.is_(None))
+        .options(
+            selectinload(Discussion.user),
+            selectinload(Discussion.lesson),
+            selectinload(Discussion.replies)
+        )
+        .order_by(Discussion.is_pinned.desc(), Discussion.created_at.desc())
+    )
+    discussions = result.scalars().all()
+
+    return [
+        {
+            "id": d.id,
+            "lesson_id": d.lesson_id,
+            "lesson_title": d.lesson.title if d.lesson else None,
+            "user_id": d.user_id,
+            "user_name": d.user.full_name if d.user else "Anonymous",
+            "user_avatar": d.user.avatar_url if d.user else None,
+            "content": d.content,
+            "is_pinned": d.is_pinned,
+            "is_answer": d.is_answer,
+            "upvotes": d.upvotes,
+            "reply_count": len(d.replies) if d.replies else 0,
+            "created_at": d.created_at,
+            "updated_at": d.updated_at,
+        }
+        for d in discussions
+    ]
+
+
+direct_discussions_router = APIRouter(prefix="/discussions", tags=["Discussions"])
+
+
+async def _get_discussion_with_access(
+    post_id: UUID,
+    db: AsyncSession,
+    current_user: User,
+) -> tuple[Discussion, object, object]:
+    result = await db.execute(
+        select(Discussion)
+        .where(Discussion.id == post_id)
+        .options(selectinload(Discussion.user), selectinload(Discussion.replies))
+    )
+    discussion = result.scalar_one_or_none()
+    if not discussion:
+        raise HTTPException(status_code=404, detail="Discussion not found")
+    lesson, course = await get_lesson_with_course(db, discussion.lesson_id)
+    await verify_lesson_access(lesson, course, current_user, db)
+    return discussion, lesson, course
+
+
+@direct_discussions_router.put("/{post_id}", response_model=DiscussionResponse)
+async def direct_update_discussion(
+    post_id: UUID,
+    discussion_data: DiscussionUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    discussion, _, _ = await _get_discussion_with_access(post_id, db, current_user)
+    if discussion.user_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    if discussion_data.content is not None:
+        discussion.content = discussion_data.content
+
+    await db.commit()
+    await db.refresh(discussion)
+    return {
+        "id": discussion.id,
+        "lesson_id": discussion.lesson_id,
+        "user_id": discussion.user_id,
+        "user_name": discussion.user.full_name if discussion.user else None,
+        "user_avatar": discussion.user.avatar_url if discussion.user else None,
+        "parent_id": discussion.parent_id,
+        "content": discussion.content,
+        "is_pinned": discussion.is_pinned,
+        "is_answer": discussion.is_answer,
+        "upvotes": discussion.upvotes,
+        "reply_count": len(discussion.replies) if discussion.replies else 0,
+        "created_at": discussion.created_at,
+        "updated_at": discussion.updated_at,
+        "replies": []
+    }
+
+
+@direct_discussions_router.delete("/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def direct_delete_discussion(
+    post_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    discussion, _, _ = await _get_discussion_with_access(post_id, db, current_user)
+    if discussion.user_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    await db.delete(discussion)
+    await db.commit()
+
+
+@direct_discussions_router.post("/{post_id}/upvote", response_model=DiscussionResponse)
+async def direct_upvote_discussion(
+    post_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    discussion, _, _ = await _get_discussion_with_access(post_id, db, current_user)
+    cache = RedisCache()
+    upvote_key = f"upvote:{post_id}:{current_user.id}"
+    already_upvoted = await cache.get(upvote_key)
+    if already_upvoted:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You have already upvoted this post"
+        )
+
+    discussion.upvotes += 1
+    await db.commit()
+    await db.refresh(discussion)
+    await cache.set(upvote_key, True, ttl=86400 * 30)
+
+    return {
+        "id": discussion.id,
+        "lesson_id": discussion.lesson_id,
+        "user_id": discussion.user_id,
+        "user_name": discussion.user.full_name if discussion.user else None,
+        "user_avatar": discussion.user.avatar_url if discussion.user else None,
+        "parent_id": discussion.parent_id,
+        "content": discussion.content,
+        "is_pinned": discussion.is_pinned,
+        "is_answer": discussion.is_answer,
+        "upvotes": discussion.upvotes,
+        "reply_count": len(discussion.replies) if discussion.replies else 0,
+        "created_at": discussion.created_at,
+        "updated_at": discussion.updated_at,
+        "replies": []
+    }
+
+
+@direct_discussions_router.post("/{post_id}/mark-answer", response_model=DiscussionResponse)
+async def direct_toggle_mark_answer(
+    post_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    discussion, _, course = await _get_discussion_with_access(post_id, db, current_user)
+    if course.lecturer_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only course instructor or admin can mark official answer")
+
+    discussion.is_answer = not discussion.is_answer
+    await db.commit()
+    await db.refresh(discussion)
+
+    return {
+        "id": discussion.id,
+        "lesson_id": discussion.lesson_id,
+        "user_id": discussion.user_id,
+        "user_name": discussion.user.full_name if discussion.user else None,
+        "user_avatar": discussion.user.avatar_url if discussion.user else None,
+        "parent_id": discussion.parent_id,
+        "content": discussion.content,
+        "is_pinned": discussion.is_pinned,
+        "is_answer": discussion.is_answer,
+        "upvotes": discussion.upvotes,
+        "reply_count": len(discussion.replies) if discussion.replies else 0,
+        "created_at": discussion.created_at,
+        "updated_at": discussion.updated_at,
+        "replies": []
+    }
+
+
+@direct_discussions_router.post("/{post_id}/pin", response_model=DiscussionResponse)
+async def direct_toggle_pin(
+    post_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    discussion, _, course = await _get_discussion_with_access(post_id, db, current_user)
+    if course.lecturer_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only course instructor or admin can pin discussions")
+
+    discussion.is_pinned = not discussion.is_pinned
+    await db.commit()
+    await db.refresh(discussion)
+
+    return {
+        "id": discussion.id,
+        "lesson_id": discussion.lesson_id,
+        "user_id": discussion.user_id,
+        "user_name": discussion.user.full_name if discussion.user else None,
+        "user_avatar": discussion.user.avatar_url if discussion.user else None,
+        "parent_id": discussion.parent_id,
+        "content": discussion.content,
+        "is_pinned": discussion.is_pinned,
+        "is_answer": discussion.is_answer,
+        "upvotes": discussion.upvotes,
+        "reply_count": len(discussion.replies) if discussion.replies else 0,
+        "created_at": discussion.created_at,
+        "updated_at": discussion.updated_at,
+        "replies": []
+    }

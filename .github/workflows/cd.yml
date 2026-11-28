@@ -1,0 +1,172 @@
+name: Nhom 07 (65HTTT) CD (dev)
+
+on:
+  workflow_run:
+    workflows: ["Nhom 07 (65HTTT) CI"]
+    types: [completed]
+    branches:
+      - dev
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cd-dev
+  cancel-in-progress: false
+
+jobs:
+  deploy-heroku:
+    name: CD · Heroku (${{ matrix.target }})
+    if: >-
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'dev') ||
+      (github.event_name == 'workflow_dispatch' &&
+       github.ref == 'refs/heads/dev')
+    runs-on: ubuntu-latest
+    environment: dev
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        include:
+          - target: api
+            process_type: web
+            app_secret: HEROKU_APP_API
+            run_migrations: true
+          - target: ai
+            process_type: web
+            app_secret: HEROKU_APP_AI
+            run_migrations: false
+          - target: worker
+            process_type: worker
+            app_secret: HEROKU_APP_WORKER
+            run_migrations: false
+    defaults:
+      run:
+        working-directory: nhom07-65httt/src
+    env:
+      HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+      HEROKU_APP_NAME: ${{ secrets[matrix.app_secret] }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Verify Heroku secrets
+        run: |
+          if [ -z "$HEROKU_API_KEY" ] || [ -z "$HEROKU_APP_NAME" ]; then
+            echo "::error::Missing HEROKU_API_KEY or ${{ matrix.app_secret }} secret in GitHub Environment 'dev'."
+            exit 1
+          fi
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Install Heroku CLI
+        run: |
+          curl -fsSL https://cli-assets.heroku.com/install-ubuntu.sh | sh
+
+      - name: Login to Heroku Container Registry
+        run: |
+          echo "$HEROKU_API_KEY" | docker login --username=_ --password-stdin registry.heroku.com
+
+      - name: Build Docker image (${{ matrix.target }})
+        uses: docker/build-push-action@v6
+        with:
+          context: nhom07-65httt/src
+          file: nhom07-65httt/src/python.Dockerfile
+          target: ${{ matrix.target }}
+          platforms: linux/amd64
+          provenance: false
+          sbom: false
+          outputs: type=docker,dest=/tmp/learninghubs-${{ matrix.target }}.tar,name=registry.heroku.com/${{ env.HEROKU_APP_NAME }}/${{ matrix.process_type }},oci-mediatypes=false
+          cache-from: type=gha,scope=heroku-${{ matrix.target }}
+          cache-to: type=gha,mode=max,scope=heroku-${{ matrix.target }}
+
+      - name: Push Docker image to Heroku Container Registry
+        run: |
+          docker load --input "/tmp/learninghubs-${{ matrix.target }}.tar"
+          docker push "registry.heroku.com/${HEROKU_APP_NAME}/${{ matrix.process_type }}"
+
+      - name: Release container on Heroku
+        run: |
+          heroku container:release "${{ matrix.process_type }}" --app "$HEROKU_APP_NAME"
+
+      - name: Run Alembic database migrations on Neon
+        if: matrix.run_migrations == true
+        run: |
+          heroku run "MIGRATION_MODE=True alembic upgrade head" --app "$HEROKU_APP_NAME"
+
+  deploy-vercel:
+    name: CD · Vercel (Frontend)
+    needs: [deploy-heroku]
+    if: >-
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'dev') ||
+      (github.event_name == 'workflow_dispatch' &&
+       github.ref == 'refs/heads/dev')
+    runs-on: ubuntu-latest
+    environment: dev
+    outputs:
+      url: ${{ steps.deploy.outputs.url }}
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      INTERNAL_API_URL: https://learninghubs-api-3fdfcd0a3a60.herokuapp.com
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: nhom07-65httt/src/frontend/package-lock.json
+
+      - name: Verify Vercel secrets
+        run: |
+          if [ -z "$VERCEL_TOKEN" ] || [ -z "$VERCEL_ORG_ID" ] || [ -z "$VERCEL_PROJECT_ID" ]; then
+            echo "::error::Missing VERCEL_TOKEN, VERCEL_ORG_ID, or VERCEL_PROJECT_ID secret in GitHub Environment 'dev'."
+            exit 1
+          fi
+
+      - name: Pull Vercel environment configuration
+        run: npx --yes vercel@latest pull --yes --environment=production --token="$VERCEL_TOKEN"
+
+      - name: Build Vercel output
+        run: npx --yes vercel@latest build --prod --token="$VERCEL_TOKEN"
+
+      - name: Deploy to Vercel
+        id: deploy
+        run: |
+          DEPLOY_URL=$(npx --yes vercel@latest deploy --prebuilt --prod --token="$VERCEL_TOKEN")
+          echo "Deployed URL: $DEPLOY_URL"
+          echo "url=$DEPLOY_URL" >> "$GITHUB_OUTPUT"
+
+  smoke-test:
+    name: CD · Post-Deploy Smoke Test
+    needs: [deploy-heroku, deploy-vercel]
+    if: >-
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'dev') ||
+      (github.event_name == 'workflow_dispatch' &&
+       github.ref == 'refs/heads/dev')
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Check API /health/ready
+        env:
+          API_HEALTH_URL: https://learninghubs-api-3fdfcd0a3a60.herokuapp.com/health/ready
+        run: |
+          curl -fsSL --max-time 10 --retry 12 --retry-delay 5 --retry-all-errors "$API_HEALTH_URL"
+
+      - name: Check Frontend /welcome
+        env:
+          WEB_URL: ${{ needs.deploy-vercel.outputs.url }}
+        run: |
+          curl -fsSL -o /dev/null --max-time 10 --retry 6 --retry-delay 5 --retry-all-errors "${WEB_URL}/welcome"

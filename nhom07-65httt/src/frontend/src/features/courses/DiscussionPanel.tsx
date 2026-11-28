@@ -1,0 +1,182 @@
+import { useEffect, useState } from 'react'
+import { useDiscussions } from '../../hooks/useDiscussions'
+import { Card } from '../../components/ui/Card'
+import { Button } from '../../components/ui/Button'
+import { Skeleton } from '../../components/ui/Skeleton'
+import { MessageSquare, ThumbsUp, User, ChevronDown, ChevronUp } from 'lucide-react'
+
+interface Props {
+  lessonId: string
+}
+
+export function DiscussionPanel({ lessonId }: Props) {
+  const {
+    discussions = [], loading, fetchDiscussions,
+    createDiscussion, upvote,
+  } = useDiscussions(lessonId)
+  const [newContent, setNewContent] = useState('')
+  const [replyTo, setReplyTo] = useState<string | null>(null)
+  const [replyContent, setReplyContent] = useState('')
+  const [expandedReplies, setExpandedReplies] = useState<Set<string>>(new Set())
+  const [submitting, setSubmitting] = useState(false)
+
+  const safeDiscussions = Array.isArray(discussions) ? discussions : []
+
+  useEffect(() => { fetchDiscussions() }, [fetchDiscussions])
+
+  const handlePost = async () => {
+    if (!newContent.trim()) return
+    setSubmitting(true)
+    try {
+      await createDiscussion(newContent.trim())
+      setNewContent('')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleReply = async (parentId: string) => {
+    if (!replyContent.trim()) return
+    setSubmitting(true)
+    try {
+      await createDiscussion(replyContent.trim(), parentId)
+      setReplyContent('')
+      setReplyTo(null)
+      setExpandedReplies(prev => new Set(prev).add(parentId))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const toggleReplies = (id: string) => {
+    setExpandedReplies(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  if (loading && safeDiscussions.length === 0) {
+    return (
+      <div className="space-y-3">
+        <Skeleton className="h-6 w-32" />
+        <Skeleton className="h-20 w-full" />
+        <Skeleton className="h-20 w-full" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+        <MessageSquare className="h-4 w-4" />
+        Thảo Luận
+      </h3>
+
+      <div className="space-y-2">
+        <textarea
+          value={newContent}
+          onChange={(e) => setNewContent(e.target.value)}
+          placeholder="Bắt đầu một chủ đề thảo luận..."
+          className="w-full min-h-[60px] rounded-lg border border-input bg-surface px-3 py-2 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-primary/20"
+        />
+        <div className="flex justify-end">
+          <Button onClick={handlePost} disabled={submitting || !newContent.trim()} size="sm">
+            {submitting ? 'Đang đăng...' : 'Đăng'}
+          </Button>
+        </div>
+      </div>
+
+      {safeDiscussions.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Chưa có thảo luận nào. Hãy là người đầu tiên đặt câu hỏi!</p>
+      ) : (
+        <div className="space-y-3">
+          {safeDiscussions.map((discussion) => {
+            const hasReplies = Array.isArray(discussion?.replies) && discussion.replies.length > 0
+            const repliesExpanded = expandedReplies.has(discussion.id)
+            const repliesCount = Array.isArray(discussion?.replies) ? discussion.replies.length : (discussion?.reply_count ?? 0)
+
+            return (
+              <Card key={discussion.id} className="p-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <User className="h-4 w-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-medium text-foreground">{discussion.user_name || 'Học viên ẩn danh'}</span>
+                      {discussion.is_pinned && <span className="text-xs text-warning font-medium">Đã ghim</span>}
+                      <span className="text-xs text-muted-foreground">{discussion.created_at ? new Date(discussion.created_at).toLocaleDateString('vi-VN') : ''}</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-1">{discussion.content}</p>
+                    <div className="flex items-center gap-3 mt-2">
+                      <button
+                        onClick={() => upvote(discussion.id)}
+                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition"
+                      >
+                        <ThumbsUp className="h-3 w-3" />
+                        {discussion.upvotes ?? 0}
+                      </button>
+                      <button
+                        onClick={() => setReplyTo(replyTo === discussion.id ? null : discussion.id)}
+                        className="text-xs text-muted-foreground hover:text-primary transition"
+                      >
+                        Trả lời
+                      </button>
+                      {hasReplies && (
+                        <button
+                          onClick={() => toggleReplies(discussion.id)}
+                          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition"
+                        >
+                          {repliesExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                          {repliesCount} phản hồi
+                        </button>
+                      )}
+                    </div>
+
+                    {replyTo === discussion.id && (
+                      <div className="mt-3 space-y-2">
+                        <textarea
+                          value={replyContent}
+                          onChange={(e) => setReplyContent(e.target.value)}
+                          placeholder="Nhập câu trả lời..."
+                          className="w-full min-h-[50px] rounded-lg border border-input bg-surface px-3 py-2 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        />
+                        <div className="flex gap-2 justify-end">
+                          <Button variant="ghost" size="sm" onClick={() => { setReplyTo(null); setReplyContent('') }}>Hủy</Button>
+                          <Button size="sm" onClick={() => handleReply(discussion.id)} disabled={submitting || !replyContent.trim()}>
+                            {submitting ? 'Đang gửi...' : 'Gửi trả lời'}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {hasReplies && repliesExpanded && (
+                      <div className="mt-3 space-y-2 pl-4 border-l-2 border-border">
+                        {(discussion.replies ?? []).map((reply) => (
+                          <div key={reply.id} className="flex items-start gap-2">
+                            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs">
+                              {reply.user_name?.[0] || '?'}
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-medium text-foreground">{reply.user_name || 'Học viên ẩn danh'}</span>
+                                <span className="text-2xs text-muted-foreground">{reply.created_at ? new Date(reply.created_at).toLocaleDateString('vi-VN') : ''}</span>
+                              </div>
+                              <p className="text-xs text-muted-foreground">{reply.content}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </Card>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}

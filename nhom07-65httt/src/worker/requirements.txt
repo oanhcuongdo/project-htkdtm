@@ -1,0 +1,32 @@
+# ── Core Celery stack ─────────────────────────────────────────────────────────
+celery==5.3.4
+kombu==5.3.4
+redis==5.0.1
+
+# ── Database ──────────────────────────────────────────────────────────────────
+psycopg2-binary==2.9.9
+
+# ── HTTP ──────────────────────────────────────────────────────────────────────
+httpx==0.26.0
+
+# ── Config & validation ───────────────────────────────────────────────────────
+pydantic==2.5.3
+pydantic-settings==2.1.0
+python-dotenv==1.0.0
+
+# ── Document parsing ──────────────────────────────────────────────────────────
+PyMuPDF>=1.23.0
+pypdf>=4.0.0
+pdfplumber>=0.10.0
+Pillow>=10.0.0
+pytesseract>=0.3.10
+python-docx==1.1.0
+
+# ── Vector store & embeddings ─────────────────────────────────────────────────
+qdrant-client==1.7.0
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch
+sentence-transformers==2.5.1
+
+# ── Object storage ────────────────────────────────────────────────────────────
+minio==7.2.0

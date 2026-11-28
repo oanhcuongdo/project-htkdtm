@@ -1,0 +1,42 @@
+project:
+  name: SmartEdu Course Dataset
+  schema_version: "1.0"
+  dataset_version: "0.1.0"
+  reviewer: null
+
+sources:
+  legacy_csv: "data/udemy_courses.csv"
+  udemy:
+    base_url: "https://www.udemy.com/"
+    robots_url: "https://www.udemy.com/robots.txt"
+    terms_url: "https://www.udemy.com/terms/terms-of-use/"
+    sitemap_url: "https://www.udemy.com/sitemap.xml"
+    authorized: false
+    authorization_reference: null
+  khoahocre:
+    base_url: "https://khoahocre.com/"
+    status: "not_assessed"
+
+paths:
+  raw: "data/raw"
+  staging: "data/staging"
+  approved: "data/approved"
+  releases: "data/releases"
+  reports: "data/reports"
+  internal_seed: "data/internal/courses.json"
+  taxonomy: null
+
+crawler:
+  enabled: false
+  max_pages: 1
+  max_courses: 0
+  request_delay: 2.0
+  timeout: 30
+  retries: 3
+  backoff_factor: 2
+  respect_robots: true
+
+database:
+  adapter: null
+  dry_run: true
+  connection_env: null

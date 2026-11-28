@@ -1,0 +1,484 @@
+import json
+import uuid
+from datetime import datetime, timezone
+from typing import List, Optional
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.clients.minio_client import MinioClient
+from app.core.config import settings
+from app.core.database import get_db
+from app.dependencies.auth import (
+    get_current_user,
+    require_active_user,
+    require_lecturer,
+)
+from app.dependencies.course_auth import (
+    get_lesson_with_course,
+    verify_course_ownership,
+    verify_lesson_access,
+)
+from app.models import (
+    Assignment,
+    AssignmentSubmission,
+    Enrollment,
+    Notification,
+)
+from app.models.user import User
+from app.schemas.course_content import (
+    AssignmentCreate,
+    AssignmentResponse,
+    AssignmentUpdate,
+    SubmissionCreate,
+    SubmissionGrade,
+    SubmissionResponse,
+)
+from app.utils.upload import (
+    read_upload_file_safely,
+    sanitize_filename,
+    validate_file_magic_bytes,
+)
+
+router = APIRouter(prefix="/lessons/{lesson_id}/assignment", tags=["Assignments"])
+
+
+def _parse_and_presign_attachments(attachments_str: str | None) -> list:
+    if not attachments_str:
+        return []
+    try:
+        # Try JSON parsing first
+        import json
+        items = json.loads(attachments_str)
+    except Exception:
+        try:
+            # Fall back to safe Python literal evaluation (handles single quotes)
+            import ast
+            items = ast.literal_eval(attachments_str)
+        except Exception:
+            return []
+            
+    if not isinstance(items, list):
+        return []
+        
+    try:
+        minio_client = MinioClient()
+        for item in items:
+            if isinstance(item, dict) and "file_url" in item:
+                url = item["file_url"]
+                if url and url.startswith("s3://"):
+                    try:
+                        item["file_url"] = minio_client.get_presigned_url(url)
+                    except Exception:
+                        pass
+    except Exception:
+        pass
+        
+    return items
+
+
+# ============ ASSIGNMENT ROUTES (LECTURER) ============
+
+@router.get("", response_model=Optional[AssignmentResponse])
+async def get_assignment(
+    lesson_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    lesson, course = await get_lesson_with_course(db, lesson_id)
+    await verify_lesson_access(lesson, course, current_user, db)
+    result = await db.execute(select(Assignment).where(Assignment.lesson_id == lesson_id))
+    return result.scalar_one_or_none()
+
+
+@router.post("", response_model=AssignmentResponse, status_code=status.HTTP_201_CREATED)
+async def create_assignment(
+    lesson_id: UUID,
+    assignment_data: AssignmentCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_lecturer)
+):
+    lesson, course = await get_lesson_with_course(db, lesson_id)
+    await verify_course_ownership(course, current_user)
+
+    existing = await db.execute(select(Assignment).where(Assignment.lesson_id == lesson_id))
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Assignment already exists for this lesson")
+
+    assignment = Assignment(
+        lesson_id=lesson_id,
+        title=assignment_data.title,
+        description=assignment_data.description,
+        instructions=assignment_data.instructions,
+        deadline=assignment_data.deadline.astimezone(timezone.utc).replace(tzinfo=None) if assignment_data.deadline and assignment_data.deadline.tzinfo else assignment_data.deadline,
+        max_score=assignment_data.max_score,
+        allow_resubmit=assignment_data.allow_resubmit,
+        max_resubmits=assignment_data.max_resubmits
+    )
+    db.add(assignment)
+    await db.commit()
+    await db.refresh(assignment)
+    return assignment
+
+
+@router.put("", response_model=AssignmentResponse)
+async def update_assignment(
+    lesson_id: UUID,
+    assignment_data: AssignmentUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_lecturer)
+):
+    lesson, course = await get_lesson_with_course(db, lesson_id)
+    await verify_course_ownership(course, current_user)
+
+    result = await db.execute(select(Assignment).where(Assignment.lesson_id == lesson_id))
+    assignment = result.scalar_one_or_none()
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+
+    for key, value in assignment_data.model_dump(exclude_unset=True).items():
+        if key == "deadline" and isinstance(value, datetime) and value.tzinfo:
+            value = value.astimezone(timezone.utc).replace(tzinfo=None)
+        setattr(assignment, key, value)
+
+    await db.commit()
+    await db.refresh(assignment)
+    return assignment
+
+
+@router.delete("", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_assignment(
+    lesson_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_lecturer)
+):
+    lesson, course = await get_lesson_with_course(db, lesson_id)
+    await verify_course_ownership(course, current_user)
+
+    result = await db.execute(select(Assignment).where(Assignment.lesson_id == lesson_id))
+    assignment = result.scalar_one_or_none()
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+
+    await db.delete(assignment)
+    await db.commit()
+
+
+# ============ SUBMISSION ROUTES (STUDENT) ============
+
+@router.post("/submissions/upload", status_code=status.HTTP_201_CREATED)
+async def upload_submission_file(
+    lesson_id: UUID,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_active_user)
+):
+    lesson, course = await get_lesson_with_course(db, lesson_id)
+    await verify_lesson_access(lesson, course, current_user, db)
+
+    # Verify student enrollment
+    enrollment_result = await db.execute(
+        select(Enrollment).where(
+            Enrollment.student_id == current_user.id,
+            Enrollment.course_id == course.id,
+            Enrollment.status.in_(["active", "completed"]),
+            Enrollment.payment_status == "paid",
+        )
+    )
+    enrollment = enrollment_result.scalar_one_or_none()
+    if not enrollment:
+        raise HTTPException(status_code=403, detail="Not enrolled in this course")
+
+    # Get Assignment ID
+    result = await db.execute(select(Assignment).where(Assignment.lesson_id == lesson_id))
+    assignment = result.scalar_one_or_none()
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+
+    filename = sanitize_filename(file.filename)
+    ext = filename.split(".")[-1].lower() if "." in filename else "bin"
+
+    # Security: validate file type and size
+    allowed_exts = {"pdf", "doc", "docx", "png", "jpg", "jpeg", "txt", "zip"}
+    if ext not in allowed_exts:
+        raise HTTPException(status_code=400, detail=f"File type '.{ext}' not allowed. Allowed: {', '.join(sorted(allowed_exts))}")
+    content = await read_upload_file_safely(file, max_size_bytes=20 * 1024 * 1024)
+    if not validate_file_magic_bytes(content, ext):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Uploaded file content does not match expected signature for extension .{ext}."
+        )
+    
+    # Key: submissions/{assignment_id}/{student_id}/{uuid}.{ext}
+    minio_key = f"submissions/{assignment.id}/{current_user.id}/{uuid.uuid4()}.{ext}"
+    
+    # Upload to MinIO
+    minio_client = MinioClient()
+    storage_uri = minio_client.upload_file(content, minio_key, file.content_type)
+
+    try:
+        presigned_url = minio_client.get_presigned_url(storage_uri)
+    except Exception:
+        presigned_url = storage_uri
+
+    return {
+        "file_name": filename,
+        "file_url": presigned_url,
+        "file_type": file.content_type,
+        "file_size": len(content),
+        "storage_key": storage_uri
+    }
+
+
+@router.post("/submissions", response_model=SubmissionResponse, status_code=status.HTTP_201_CREATED)
+async def create_submission(
+    lesson_id: UUID,
+    submission_data: SubmissionCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_active_user)
+):
+    lesson, course = await get_lesson_with_course(db, lesson_id)
+    await verify_lesson_access(lesson, course, current_user, db)
+
+    enrollment_result = await db.execute(
+        select(Enrollment).where(
+            Enrollment.student_id == current_user.id,
+            Enrollment.course_id == course.id,
+            Enrollment.status.in_(["active", "completed"]),
+            Enrollment.payment_status == "paid",
+        )
+    )
+    enrollment = enrollment_result.scalar_one_or_none()
+    if not enrollment:
+        raise HTTPException(status_code=403, detail="Not enrolled")
+
+    result = await db.execute(select(Assignment).where(Assignment.lesson_id == lesson_id))
+    assignment = result.scalar_one_or_none()
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+
+    existing_count = await db.execute(
+        select(AssignmentSubmission).where(
+            AssignmentSubmission.assignment_id == assignment.id,
+            AssignmentSubmission.student_id == current_user.id
+        )
+    )
+    existing_submissions = existing_count.scalars().all()
+
+    if not assignment.allow_resubmit and len(existing_submissions) > 0:
+        raise HTTPException(status_code=400, detail="Resubmission not allowed")
+
+    # max_resubmits = max ADDITIONAL submissions after the first one.
+    # First submission (len==0) is always allowed; max_resubmits=0 blocks
+    # everything after the first, >0 allows that many extra tries.
+    if len(existing_submissions) > assignment.max_resubmits:
+        raise HTTPException(status_code=400, detail="Maximum resubmits reached")
+
+    is_late = False
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+    if assignment.deadline and now_utc > assignment.deadline:
+        is_late = True
+
+    normalized_attachments = []
+    for item in submission_data.attachments or []:
+        if not isinstance(item, dict):
+            raise HTTPException(status_code=400, detail="Invalid attachment")
+        storage_key = item.get("storage_key") or item.get("file_url")
+        if not isinstance(storage_key, str) or not storage_key.startswith(("s3://", "file://")):
+            raise HTTPException(status_code=400, detail="Attachments must use managed storage")
+        clean_storage_key = storage_key.replace(f"s3://{settings.MINIO_BUCKET_NAME}/", "").replace("file://", "")
+        if not clean_storage_key.startswith(f"submissions/{assignment.id}/{current_user.id}/"):
+            raise HTTPException(status_code=400, detail="Attachment does not belong to this submission")
+        normalized_attachments.append({
+            "file_name": str(item.get("file_name", "attachment"))[:255],
+            "file_url": storage_key,
+            "storage_key": storage_key,
+            "file_type": str(item.get("file_type", ""))[:100],
+            "file_size": item.get("file_size"),
+        })
+
+    submission = AssignmentSubmission(
+        assignment_id=assignment.id,
+        student_id=current_user.id,
+        submission_text=submission_data.submission_text,
+        attachments=json.dumps(normalized_attachments) if normalized_attachments else None,
+        is_late=is_late
+    )
+    db.add(submission)
+
+    # Notify lecturer that a new submission was submitted
+    if course.lecturer_id and course.lecturer_id != current_user.id:
+        db.add(Notification(
+            user_id=course.lecturer_id,
+            title=f"Bài nộp mới: {lesson.title}",
+            detail=f"Học viên {current_user.full_name or 'Học viên'} vừa nộp bài tập trong khóa '{course.title}'.",
+            type="assignment",
+            related_id=course.id,
+            related_type="course",
+        ))
+
+    await db.commit()
+    await db.refresh(submission)
+
+    submission_dict = {
+        "id": submission.id,
+        "assignment_id": submission.assignment_id,
+        "student_id": submission.student_id,
+        "student_name": current_user.full_name,
+        "submission_text": submission.submission_text,
+        "attachments": _parse_and_presign_attachments(submission.attachments),
+        "score": submission.score,
+        "feedback": submission.feedback,
+        "submitted_at": submission.submitted_at,
+        "graded_at": submission.graded_at,
+        "is_late": submission.is_late
+    }
+    return submission_dict
+
+
+@router.get("/submissions", response_model=List[SubmissionResponse])
+async def get_my_submissions(
+    lesson_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_active_user)
+):
+    lesson, course = await get_lesson_with_course(db, lesson_id)
+    await verify_lesson_access(lesson, course, current_user, db)
+
+    result = await db.execute(select(Assignment).where(Assignment.lesson_id == lesson_id))
+    assignment = result.scalar_one_or_none()
+    if not assignment:
+        return []
+
+    # Security: only return current user's submissions, joined with User to avoid N+1 queries
+    submissions_result = await db.execute(
+        select(AssignmentSubmission, User)
+        .outerjoin(User, User.id == AssignmentSubmission.student_id)
+        .where(
+            AssignmentSubmission.assignment_id == assignment.id,
+            AssignmentSubmission.student_id == current_user.id
+        )
+        .order_by(AssignmentSubmission.submitted_at.desc())
+    )
+    rows = submissions_result.all()
+
+    response = []
+    for s, student in rows:
+        response.append({
+            "id": s.id,
+            "assignment_id": s.assignment_id,
+            "student_id": s.student_id,
+            "student_name": student.full_name if student else current_user.full_name,
+            "submission_text": s.submission_text,
+            "attachments": _parse_and_presign_attachments(s.attachments),
+            "score": s.score,
+            "feedback": s.feedback,
+            "submitted_at": s.submitted_at,
+            "graded_at": s.graded_at,
+            "is_late": s.is_late
+        })
+    return response
+
+
+# ============ GRADING ROUTES (LECTURER) ============
+
+@router.get("/submissions/all", response_model=List[SubmissionResponse])
+async def get_all_submissions(
+    lesson_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_lecturer)
+):
+    lesson, course = await get_lesson_with_course(db, lesson_id)
+    await verify_course_ownership(course, current_user)
+
+    result = await db.execute(select(Assignment).where(Assignment.lesson_id == lesson_id))
+    assignment = result.scalar_one_or_none()
+    if not assignment:
+        return []
+
+    # Joined with User to eliminate N+1 query problem
+    submissions_result = await db.execute(
+        select(AssignmentSubmission, User)
+        .outerjoin(User, User.id == AssignmentSubmission.student_id)
+        .where(AssignmentSubmission.assignment_id == assignment.id)
+        .order_by(AssignmentSubmission.submitted_at.desc())
+    )
+    rows = submissions_result.all()
+
+    response = []
+    for s, student in rows:
+        response.append({
+            "id": s.id,
+            "assignment_id": s.assignment_id,
+            "student_id": s.student_id,
+            "student_name": student.full_name if student else None,
+            "submission_text": s.submission_text,
+            "attachments": _parse_and_presign_attachments(s.attachments),
+            "score": s.score,
+            "feedback": s.feedback,
+            "submitted_at": s.submitted_at,
+            "graded_at": s.graded_at,
+            "is_late": s.is_late
+        })
+    return response
+
+
+@router.post("/submissions/{submission_id}/grade", response_model=SubmissionResponse)
+async def grade_submission(
+    lesson_id: UUID,
+    submission_id: UUID,
+    grade_data: SubmissionGrade,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_lecturer)
+):
+    lesson, course = await get_lesson_with_course(db, lesson_id)
+    await verify_course_ownership(course, current_user)
+
+    result = await db.execute(
+        select(AssignmentSubmission)
+        .join(Assignment, Assignment.id == AssignmentSubmission.assignment_id)
+        .where(
+            AssignmentSubmission.id == submission_id,
+            Assignment.lesson_id == lesson_id,
+        )
+    )
+    submission = result.scalar_one_or_none()
+    if not submission:
+        raise HTTPException(status_code=404, detail="Submission not found")
+
+    submission.score = grade_data.score
+    submission.feedback = grade_data.feedback
+    submission.graded_at = datetime.now(timezone.utc).replace(tzinfo=None)
+
+    # Notify student that assignment has been graded
+    if submission.student_id and submission.student_id != current_user.id:
+        db.add(Notification(
+            user_id=submission.student_id,
+            title=f"Bài tập đã được chấm: {lesson.title}",
+            detail=f"Bài tập của bạn trong khóa '{course.title}' đã được chấm: {grade_data.score if grade_data.score is not None else '—'} điểm.",
+            type="grade",
+            related_id=course.id,
+            related_type="course",
+        ))
+
+    await db.commit()
+    await db.refresh(submission)
+
+    student_result = await db.execute(select(User).where(User.id == submission.student_id))
+    student = student_result.scalar_one_or_none()
+
+    return {
+        "id": submission.id,
+        "assignment_id": submission.assignment_id,
+        "student_id": submission.student_id,
+        "student_name": student.full_name if student else None,
+        "submission_text": submission.submission_text,
+        "attachments": _parse_and_presign_attachments(submission.attachments),
+        "score": submission.score,
+        "feedback": submission.feedback,
+        "submitted_at": submission.submitted_at,
+        "graded_at": submission.graded_at,
+        "is_late": submission.is_late
+    }

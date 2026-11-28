@@ -1,0 +1,56 @@
+from datetime import datetime
+from uuid import UUID
+
+from pydantic import BaseModel, Field, ConfigDict
+
+
+class EnrollmentBase(BaseModel):
+    pass
+
+
+class PaymentIntentRequest(BaseModel):
+    payment_method: str = Field(pattern="^(vnpay|momo|free)$")
+
+
+class PaymentIntentResponse(BaseModel):
+    payment_url: str
+    transaction_id: str
+    amount_vnd: int
+
+
+class PaymentConfirmRequest(BaseModel):
+    transaction_id: str = Field(min_length=1, max_length=255)
+    payment_method: str = Field(pattern="^(vnpay|momo)$")
+    payment_data: dict | None = Field(default=None, max_length=50)
+
+
+class EnrollmentResponse(BaseModel):
+    id: UUID
+    student_id: UUID
+    course_id: UUID
+    payment_amount_vnd: int
+    payment_status: str
+    payment_method: str | None = None
+    transaction_id: str | None = None
+    status: str
+    progress_percent: int = 0
+    enrolled_at: datetime
+    completed_at: datetime | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class EnrollmentWithCourseResponse(EnrollmentResponse):
+    course_title: str | None = None
+    course_thumbnail: str | None = None
+    lecturer_name: str | None = None
+    student_name: str | None = None
+    student_email: str | None = None
+    student_avatar_url: str | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class EnrollmentListResponse(BaseModel):
+    items: list[EnrollmentWithCourseResponse]
+    total: int

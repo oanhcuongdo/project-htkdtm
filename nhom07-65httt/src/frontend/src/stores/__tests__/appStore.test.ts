@@ -1,0 +1,231 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { useAppStore } from '../appStore'
+
+vi.mock('../../services/api', () => ({
+  setAccessToken: vi.fn(),
+  clearAccessToken: vi.fn(),
+  authApi: {
+    login: vi.fn().mockResolvedValue({
+      data: {
+        user: { id: '1', email: 'test@test.com', full_name: 'Test User', role: 'user', avatar_url: null, created_at: null },
+        token: { access_token: 'mock-token', token_type: 'bearer', refresh_token: 'mock-refresh' }
+      }
+    }),
+    register: vi.fn().mockResolvedValue({
+      data: {
+        user: { id: '1', email: 'test@test.com', full_name: 'Test User', role: 'user', avatar_url: null, created_at: null },
+        token: { access_token: 'mock-token', token_type: 'bearer', refresh_token: 'mock-refresh' }
+      }
+    }),
+    me: vi.fn().mockResolvedValue({ data: { id: '1', email: 'test@test.com', full_name: 'Test', role: 'user' } }),
+    refresh: vi.fn().mockResolvedValue({ data: { access_token: 'mock-token', refresh_token: null } }),
+    forgotPassword: vi.fn().mockResolvedValue({ data: { message: 'Reset link sent' } }),
+    resetPassword: vi.fn().mockResolvedValue({ data: { message: 'Password reset successfully' } }),
+    logout: vi.fn().mockResolvedValue({ data: { message: 'Successfully logged out' } }),
+  },
+  documentsApi: {
+    list: vi.fn().mockResolvedValue({ data: { items: [], total: 0 } }),
+    upload: vi.fn(),
+    delete: vi.fn().mockResolvedValue({}),
+    retry: vi.fn().mockResolvedValue({}),
+  },
+  chatApi: {
+    createSession: vi.fn().mockResolvedValue({ data: { id: 'new-session', title: 'New chat', course_id: null, context_type: 'general', created_at: '', updated_at: '' } }),
+    listSessions: vi.fn().mockResolvedValue({ data: { items: [], total: 0 } }),
+    deleteSession: vi.fn().mockResolvedValue({}),
+    ask: vi.fn().mockResolvedValue({ data: { answer: 'Mock answer', citations: [], token_usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 } } }),
+    listMessages: vi.fn(),
+  },
+  studyApi: {
+    generateQuiz: vi.fn(),
+    submitQuiz: vi.fn(),
+    generateFlashcards: vi.fn(),
+    getFlashcard: vi.fn(),
+    submitEssay: vi.fn(),
+  },
+  adminApi: {
+    listUsers: vi.fn(),
+    analytics: vi.fn(),
+    health: vi.fn(),
+  },
+  notificationsApi: {
+    list: vi.fn().mockResolvedValue({ data: { items: [], total: 0, unread_count: 0 } }),
+    markRead: vi.fn().mockResolvedValue({}),
+    markAllRead: vi.fn().mockResolvedValue({}),
+    delete: vi.fn().mockResolvedValue({}),
+  },
+}))
+
+describe('appStore', () => {
+  beforeEach(() => {
+    useAppStore.setState({
+      auth: {
+        isAuthenticated: true,
+        isLoadingUser: false,
+        user: { id: '1', name: 'Test', email: 'test@example.com', role: 'Student', initials: 'T' },
+        token: 'mock',
+        login: useAppStore.getState().auth.login,
+        register: useAppStore.getState().auth.register,
+        googleLogin: useAppStore.getState().auth.googleLogin,
+        facebookLogin: useAppStore.getState().auth.facebookLogin,
+        logout: useAppStore.getState().auth.logout,
+        restoreSession: useAppStore.getState().auth.restoreSession,
+        loadUser: useAppStore.getState().auth.loadUser,
+        forgotPassword: useAppStore.getState().auth.forgotPassword,
+        resetPassword: useAppStore.getState().auth.resetPassword
+      },
+      documents: { items: [], selectedId: null, select: useAppStore.getState().documents.select, add: useAppStore.getState().documents.add, remove: useAppStore.getState().documents.remove, retry: useAppStore.getState().documents.retry, updateProgress: useAppStore.getState().documents.updateProgress, loadDocuments: useAppStore.getState().documents.loadDocuments, uploadDocument: useAppStore.getState().documents.uploadDocument },
+      chat: { sessions: [], activeSessionId: null, selectSession: useAppStore.getState().chat.selectSession, sendMessage: useAppStore.getState().chat.sendMessage, addSession: useAppStore.getState().chat.addSession, deleteSession: useAppStore.getState().chat.deleteSession },
+      notifications: { items: [], unreadCount: 0, fetch: useAppStore.getState().notifications.fetch, markRead: useAppStore.getState().notifications.markRead, markAllRead: useAppStore.getState().notifications.markAllRead, dismiss: useAppStore.getState().notifications.dismiss, clear: useAppStore.getState().notifications.clear },
+      toasts: { items: [], add: useAppStore.getState().toasts.add, remove: useAppStore.getState().toasts.remove }
+    })
+  })
+
+  describe('auth', () => {
+    it('starts authenticated', () => {
+      expect(useAppStore.getState().auth.isAuthenticated).toBe(true)
+    })
+
+    it('logs out', async () => {
+      await useAppStore.getState().auth.logout()
+      expect(useAppStore.getState().auth.isAuthenticated).toBe(false)
+      expect(useAppStore.getState().auth.user).toBeNull()
+    })
+
+    it('logs in', async () => {
+      await useAppStore.getState().auth.logout()
+      await useAppStore.getState().auth.login('test@test.com', 'password')
+      expect(useAppStore.getState().auth.isAuthenticated).toBe(true)
+    })
+  })
+
+  describe('documents', () => {
+    it('adds a document', () => {
+      useAppStore.getState().documents.add({
+        id: 'd1', name: 'test.pdf', type: 'pdf', status: 'ready', size: '1MB', pageCount: 10
+      })
+      expect(useAppStore.getState().documents.items).toHaveLength(1)
+      expect(useAppStore.getState().documents.items[0].name).toBe('test.pdf')
+    })
+
+    it('selects a document', () => {
+      useAppStore.getState().documents.add({
+        id: 'd1', name: 'test.pdf', type: 'pdf', status: 'ready', size: '1MB'
+      })
+      useAppStore.getState().documents.select('d1')
+      expect(useAppStore.getState().documents.selectedId).toBe('d1')
+    })
+
+    it('removes a document', () => {
+      useAppStore.getState().documents.add({
+        id: 'd1', name: 'test.pdf', type: 'pdf', status: 'ready', size: '1MB'
+      })
+      useAppStore.getState().documents.remove('d1')
+      expect(useAppStore.getState().documents.items).toHaveLength(0)
+    })
+
+    it('retries a failed document', () => {
+      useAppStore.getState().documents.add({
+        id: 'd1', name: 'test.pdf', type: 'pdf', status: 'failed', size: '1MB'
+      })
+      useAppStore.getState().documents.retry('d1')
+      expect(useAppStore.getState().documents.items[0].status).toBe('processing')
+    })
+  })
+
+  describe('chat', () => {
+    it('sends a message', () => {
+      useAppStore.setState({
+        chat: {
+          ...useAppStore.getState().chat,
+          sessions: [{ id: 'c1', title: 'Test', preview: '', messages: [] }],
+          activeSessionId: 'c1'
+        }
+      })
+      useAppStore.getState().chat.sendMessage('Hello')
+      const messages = useAppStore.getState().chat.sessions[0].messages
+      expect(messages).toHaveLength(2)
+      expect(messages[0].content).toBe('Hello')
+      expect(messages[0].role).toBe('user')
+      expect(messages[1].role).toBe('assistant')
+    })
+
+    it('adds a new session', async () => {
+      await useAppStore.getState().chat.addSession()
+      expect(useAppStore.getState().chat.sessions).toHaveLength(1)
+    })
+
+    it('selects a session', () => {
+      useAppStore.setState({
+        chat: {
+          ...useAppStore.getState().chat,
+          sessions: [
+            { id: 'c1', title: 'Chat 1', preview: '', messages: [] },
+            { id: 'c2', title: 'Chat 2', preview: '', messages: [] }
+          ],
+          activeSessionId: 'c1'
+        }
+      })
+      useAppStore.getState().chat.selectSession('c2')
+      expect(useAppStore.getState().chat.activeSessionId).toBe('c2')
+    })
+
+    it('deletes a session', () => {
+      useAppStore.setState({
+        chat: {
+          ...useAppStore.getState().chat,
+          sessions: [
+            { id: 'c1', title: 'Chat 1', preview: '', messages: [] },
+            { id: 'c2', title: 'Chat 2', preview: '', messages: [] }
+          ],
+          activeSessionId: 'c1'
+        }
+      })
+      useAppStore.getState().chat.deleteSession('c1')
+      expect(useAppStore.getState().chat.sessions).toHaveLength(1)
+      expect(useAppStore.getState().chat.activeSessionId).toBe('c2')
+    })
+  })
+
+  describe('notifications', () => {
+    it('dismisses a notification', () => {
+      useAppStore.setState({
+        notifications: {
+          ...useAppStore.getState().notifications,
+          items: [{ id: 'n1', title: 'Test', detail: '', time: '', isRead: false }]
+        }
+      })
+      useAppStore.getState().notifications.dismiss('n1')
+      expect(useAppStore.getState().notifications.items).toHaveLength(0)
+    })
+
+    it('clears all notifications', async () => {
+      useAppStore.setState({
+        notifications: {
+          ...useAppStore.getState().notifications,
+          items: [
+            { id: 'n1', title: 'Test 1', detail: '', time: '', isRead: false },
+            { id: 'n2', title: 'Test 2', detail: '', time: '', isRead: false }
+          ]
+        }
+      })
+      await useAppStore.getState().notifications.clear()
+      expect(useAppStore.getState().notifications.items).toHaveLength(0)
+    })
+  })
+
+  describe('toasts', () => {
+    it('adds a toast', () => {
+      useAppStore.getState().toasts.add({ type: 'success', title: 'Test' })
+      expect(useAppStore.getState().toasts.items).toHaveLength(1)
+      expect(useAppStore.getState().toasts.items[0].title).toBe('Test')
+    })
+
+    it('removes a toast', () => {
+      useAppStore.getState().toasts.add({ type: 'success', title: 'Test' })
+      const id = useAppStore.getState().toasts.items[0].id
+      useAppStore.getState().toasts.remove(id)
+      expect(useAppStore.getState().toasts.items).toHaveLength(0)
+    })
+  })
+})
