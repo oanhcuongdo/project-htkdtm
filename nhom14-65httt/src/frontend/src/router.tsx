@@ -1,3 +1,4 @@
+import NotFoundPage from "./pages/NotFoundPage";
 import { Link, Route, Routes } from "react-router-dom";
 import AppShell from "./components/layout/AppShell";
 import RoleGuard from "./components/layout/RoleGuard";
@@ -91,19 +92,7 @@ export default function AppRouter() {
               </section>
             }
           />
-          <Route
-            path="*"
-            element={
-              <section className="status-card">
-                <span className="eyebrow">404 · VỊ VIỆT</span>
-                <h1>Chưa tìm thấy trang bạn cần.</h1>
-                <p>Cùng quay về và bắt đầu lại nhé.</p>
-                <Link className="button" to="/">
-                  Về trang chủ
-                </Link>
-              </section>
-            }
-          />
+          <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>
     </CartProvider>

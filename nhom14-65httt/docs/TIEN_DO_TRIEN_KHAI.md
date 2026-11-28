@@ -444,6 +444,13 @@ Không tạo file `.pbix` rỗng thay cho sản phẩm Power BI và không đán
 - 378 kiểm thử hồi quy, hai Playwright adminDashboard mới đạt với Edge/API kiểm soát; không tràn ngang 360/390/768/1280px. TypeScript/lint/build đạt; chưa kiểm chứng backend/PostgreSQL thật. Chưa stage/commit/push.
 - Tổng quan quán/danh mục admin đã có; chưa có KPI doanh thu/người dùng/chất lượng dữ liệu. Toàn bộ giao diện chưa hoàn tất, các phần API phụ thuộc và bản đồ trong rà soát F.12.17 còn phải triển khai.
 
+## Đợt hoàn thiện component chung F.12.22
+
+- Theo yêu cầu người dùng, gom ba việc liên quan thành một đợt commit: OrderCard dùng chung cho danh sách đơn customer/vendor (giữ snapshot, tổng máy chủ, giờ Việt Nam và đường chi tiết theo vai trò); NotFoundPage tách khỏi router; AddressFallback tách form nhập tọa độ khỏi LocationPicker, giữ validation/focus và reset dữ liệu khi xóa vị trí. AddressFallback chưa phải geocoding hay bản đồ.
+- Tám Playwright đạt với Edge/API kiểm soát: hai search, hai orders, ba vendorOrders và một commonNavigation mới. Ca mới xác nhận 404 về trang chủ và xóa vị trí làm trống tên/tọa độ. TypeScript/lint/build/diff check đạt. Không thay dependencies hoặc nghiệp vụ backend.
+- Unit test chưa chạy được trong lượt này: Windows Application Control chặn node_modules/@rolldown/binding-win32-x64-msvc/rolldown-binding.win32-x64-msvc.node; Vitest fallback WASI không có. Đã xác nhận bằng require native binding trực tiếp. Mốc 378 unit/UI là kết quả lượt trước, không ghi là kiểm chứng lại cho đợt này. Cần chạy lại Vitest trên môi trường được phép nạp binding trước khi coi kiểm chứng đầy đủ.
+- Chưa stage/commit/push. Toàn bộ giao diện chưa hoàn tất; bản đồ/geocoding, thống kê và các màn hình phụ thuộc API còn như bảng rà soát. Tiếp tục gom nhiều việc liên quan cho mỗi commit theo yêu cầu mới.
+
 ## Dọn bản nháp cục bộ
 
 - Theo yêu cầu người dùng, chỉ dọn bản nháp khi bản chính tương ứng đã được tích hợp, kiểm thử, commit và không có thay đổi chưa commit.
