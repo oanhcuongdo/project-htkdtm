@@ -458,6 +458,13 @@ Không tạo file `.pbix` rỗng thay cho sản phẩm Power BI và không đán
 - Ba Playwright maps/catalog đạt với API kiểm soát, gồm chặn request OSM để xác nhận fallback và thực đơn vẫn hoạt động, không tải trước khi bấm và URL đích đúng. Không tràn ngang 360/1280px; typecheck/lint/build đạt. Chưa kiểm chứng tile/provider trực tiếp hoặc backend thật.
 - Thêm sáu ca unit URL nhưng Vitest vẫn không khởi động do native binding Rolldown bị chặn như F.12.22; chưa ghi các ca này đạt. Không thay dependencies để vượt chính sách hệ thống. Chưa stage/commit/push; toàn bộ giao diện chưa hoàn tất.
 
+## Bản đồ trong kết quả tìm kiếm F.12.24
+
+- Gom chọn quán trên kết quả tìm kiếm, bản đồ/chỉ đường và trạng thái nhận đơn thành một đợt. SearchResultMap dùng MapView chung; các món cùng quán gộp theo ID, chỉ liệt kê quán thuộc trang hiện tại. Đổi quán đóng bản đồ; đổi trang, loại kết quả, truy vấn hoặc vị trí bỏ lựa chọn cũ. Bản đồ ngoài chỉ tải sau thao tác bấm xem.
+- Nhãn khả năng nhận đơn tôn trọng can_receive_orders từ máy chủ ngay cả khi is_open và accepting_orders đều true. Không tự suy ra quán được phép nhận đơn.
+- Sáu Playwright search/maps/catalog đạt với Edge/API kiểm soát (ba search được chạy lại sau khi sửa thao tác mở form tọa độ trong test). Bao phủ gộp quán, đổi lựa chọn/trang/vị trí, kết quả rỗng, liên kết chỉ đường và responsive 360/390/768/1280px; đã xem ảnh mobile. TypeScript/lint/build đạt. Chưa kiểm chứng backend hoặc nhà cung cấp bản đồ trực tiếp.
+- Vitest chưa được kiểm chứng lại do giới hạn native binding đã ghi ở F.12.22. Đây vẫn là bản đồ một quán được chọn, chưa phải bản đồ tổng quan nhiều marker, geocoding hay chọn điểm. Toàn bộ giao diện chưa hoàn tất. Chưa stage/commit/push.
+
 ## Dọn bản nháp cục bộ
 
 - Theo yêu cầu người dùng, chỉ dọn bản nháp khi bản chính tương ứng đã được tích hợp, kiểm thử, commit và không có thay đổi chưa commit.

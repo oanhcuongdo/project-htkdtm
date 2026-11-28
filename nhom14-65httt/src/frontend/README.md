@@ -289,6 +289,13 @@ RestaurantInfo ở trang quán/món tích hợp MapView: bấm **Xem bản đồ
 
 Phần này thay ghi chú chưa có MapView ở mốc cũ nhưng chưa bao gồm geocoding, chọn điểm hoặc bản đồ nhiều kết quả tìm kiếm. Ba Playwright maps/catalog đạt với request API/OSM kiểm soát, typecheck/lint/build đạt; chưa kiểm chứng bản đồ nhà cung cấp trực tiếp/backend thật. Unit URL đã viết nhưng chưa chạy được vì native binding Rolldown bị Windows Application Control chặn như F.12.22.
 
+## Bản đồ kết quả tìm kiếm F.12.24
+
+- SearchResultMap gộp các món cùng quán theo ID, cho chọn quán trong trang kết quả hiện tại để xem vị trí/thực đơn/chỉ đường qua MapView chung. Không đại diện cho tất cả các trang kết quả.
+- Đổi quán đóng iframe; đổi trang, bộ lọc/truy vấn hoặc vị trí xóa lựa chọn cũ. Iframe chỉ tải khi bấm xem. Nhãn nhận đơn đọc cả can_receive_orders từ API.
+- Sáu ca Playwright search/maps/catalog đạt với API kiểm soát; responsive 360–1280px, typecheck/lint/build đạt. Vitest chưa chạy lại được do native binding bị Windows Application Control chặn (F.12.22). Chưa xác minh provider hoặc backend thật.
+- Chưa có bản đồ nhiều marker, tra cứu địa chỉ hay chọn tọa độ bằng bản đồ; toàn bộ giao diện vẫn còn các hạng mục phụ thuộc API.
+
 ## Auth đã triển khai
 
 | Route | Nội dung hiện có |
