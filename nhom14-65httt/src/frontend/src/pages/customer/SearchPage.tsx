@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { searchDishes, searchRestaurants } from "../../api/search";
 import { errorMessage } from "../../api/client";
 import LocationPicker from "../../components/map/LocationPicker";
+import SearchResultMap from "../../components/map/SearchResultMap";
 import { useLocation } from "../../hooks/useLocation";
 import type { Page } from "../../types/common";
 import type {
@@ -29,7 +30,9 @@ function availability(restaurant: RestaurantPublic) {
     ? "Đang đóng cửa"
     : !restaurant.accepting_orders
       ? "Đang tạm ngừng nhận đơn"
-      : "Đang nhận đơn";
+      : restaurant.can_receive_orders
+        ? "Đang nhận đơn"
+        : "Hiện chưa thể nhận đơn";
 }
 
 export default function SearchPage() {
@@ -305,6 +308,16 @@ export default function SearchPage() {
                             </article>
                           ))}
                     </div>
+                  )}
+                  {ready.page.total > 0 && (
+                    <SearchResultMap
+                      key={key}
+                      restaurants={
+                        ready.mode === "restaurants"
+                          ? ready.page.items
+                          : ready.page.items.map((item) => item.restaurant)
+                      }
+                    />
                   )}
                   {ready.page.total > 0 && (
                     <nav

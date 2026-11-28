@@ -88,19 +88,33 @@ test("tìm món/quán, đổi trang, lỗi và thử lại với API kiểm soá
   await expect(page.getByRole("alert")).toHaveText("Chưa tải được dữ liệu.");
   await page.getByRole("button", { name: "Thử lại" }).click();
   await expect(page.getByRole("heading", { name: dish.name })).toHaveCount(12);
+  const mapPicker = page.getByLabel("Quán cần xem vị trí");
+  await expect(mapPicker.locator("option")).toHaveCount(2);
+  await mapPicker.selectOption("3");
+  await expect(page.locator("iframe")).toHaveCount(0);
+  await page.route("https://www.openstreetmap.org/**", (route) =>
+    route.abort(),
+  );
+  await page.getByRole("button", { name: "Xem bản đồ quán" }).click();
+  await expect(page.locator("iframe")).toHaveCount(1);
   await page.getByRole("button", { name: "Trang sau" }).click();
   await expect(
     page.getByRole("heading", { name: "Món trang sau" }),
   ).toBeVisible();
+  await expect(mapPicker).toHaveValue("");
+  await expect(page.locator("iframe")).toHaveCount(0);
+  await mapPicker.selectOption("3");
   await page.getByRole("button", { name: "Quán ăn", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: restaurant.name }),
   ).toBeVisible();
+  await expect(mapPicker).toHaveValue("");
   await page.getByLabel("Bạn muốn tìm gì?").fill("không có");
   await page.getByLabel("Bạn muốn tìm gì?").press("Enter");
   await expect(
     page.getByRole("heading", { name: "Chưa có kết quả phù hợp" }),
   ).toBeVisible();
+  await expect(mapPicker).toHaveCount(0);
   await page.getByRole("button", { name: "Xóa vị trí" }).click();
   await expect(
     page.getByRole("heading", { name: "Chọn vị trí để bắt đầu" }),
@@ -153,6 +167,7 @@ test("từ chối quyền vị trí vẫn tìm thủ công, responsive bốn kí
   await page.getByLabel("Kinh độ", { exact: true }).fill("105.8542");
   await page.getByRole("button", { name: "Dùng tọa độ này" }).click();
   await expect(page.getByRole("heading", { name: dish.name })).toBeVisible();
+  await page.getByLabel("Quán cần xem vị trí").selectOption("3");
   for (const width of [360, 390, 768, 1280]) {
     await page.setViewportSize({ width, height: 900 });
     await page.evaluate(() => document.fonts.ready);
@@ -166,4 +181,55 @@ test("từ chối quyền vị trí vẫn tìm thủ công, responsive bốn kí
       fullPage: true,
     });
   }
+});
+
+test("bản đồ đổi quán, đổi vị trí và trạng thái nhận đơn từ máy chủ", async ({
+  page,
+}) => {
+  const other = {
+    ...restaurant,
+    id: 4,
+    name: "Quán thứ hai",
+    latitude: 22,
+    longitude: 106,
+    can_receive_orders: false,
+  };
+  await page.route("**/api/v1/search/**", (route) =>
+    route.fulfill({
+      json: {
+        items: [restaurant, other],
+        total: 2,
+        offset: 0,
+        limit: 12,
+      },
+    }),
+  );
+  await page.route("https://www.openstreetmap.org/**", (route) =>
+    route.abort(),
+  );
+  await page.goto("/search");
+  await page.getByRole("button", { name: "Quán ăn", exact: true }).click();
+  await page.getByLabel("Vĩ độ", { exact: true }).fill("21");
+  await page.getByLabel("Kinh độ", { exact: true }).fill("105");
+  await page.getByRole("button", { name: "Dùng tọa độ này" }).click();
+  await expect(
+    page.getByText("Hiện chưa thể nhận đơn", { exact: true }),
+  ).toBeVisible();
+  const picker = page.getByLabel("Quán cần xem vị trí");
+  await picker.selectOption("3");
+  await page.getByRole("button", { name: "Xem bản đồ quán" }).click();
+  await expect(page.locator("iframe")).toHaveAttribute(
+    "title",
+    `Bản đồ vị trí ${restaurant.name}`,
+  );
+  await picker.selectOption("4");
+  await expect(page.locator("iframe")).toHaveCount(0);
+  await expect(
+    page.getByRole("link", { name: "Chỉ đường đến quán (tab mới)" }),
+  ).toHaveAttribute("href", /destination=22%2C106/);
+  await page.getByText("Nhập tọa độ thủ công", { exact: true }).click();
+  await page.getByLabel("Vĩ độ", { exact: true }).fill("22");
+  await page.getByRole("button", { name: "Dùng tọa độ này" }).click();
+  await expect(picker).toHaveValue("");
+  await expect(page.locator("iframe")).toHaveCount(0);
 });
