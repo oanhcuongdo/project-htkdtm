@@ -1,5 +1,6 @@
 import type { RestaurantPublic } from "../../types/restaurant";
 import { restaurantAvailability } from "../../utils/catalog";
+import MapView from "../map/MapView";
 
 export default function RestaurantInfo({
   restaurant,
@@ -33,6 +34,11 @@ export default function RestaurantInfo({
           <dd>{restaurant.delivery_radius_km} km</dd>
         </div>
       </dl>
+      <MapView
+        latitude={restaurant.latitude}
+        longitude={restaurant.longitude}
+        name={restaurant.name}
+      />
     </>
   );
 }
