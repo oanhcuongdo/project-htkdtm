@@ -1,0 +1,6 @@
+Django==5.2.19
+wagtail==7.4.4
+djangorestframework==3.18.3
+psycopg[binary]==3.3.9
+pdfplumber==0.11.11
+requests==2.34.2

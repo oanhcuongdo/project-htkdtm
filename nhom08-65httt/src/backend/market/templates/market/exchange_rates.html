@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Tỷ giá Vietcombank | CafeFlow Market BI{% endblock %}
+{% block section_title %}Tỷ giá{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'cafeflow/exchange-rates.css' %}">{% endblock %}
+
+{% block content %}
+  <header class="page-heading">
+    <div>
+      <h1>Tỷ giá Vietcombank</h1>
+      <p>Giá mua tiền mặt, mua chuyển khoản và bán theo thời điểm công bố trong XML. Đơn vị: VND cho một đơn vị ngoại tệ.</p>
+    </div>
+    <a class="button" href="{% url 'exchange-rate-list' %}?format=json">Xem dữ liệu JSON</a>
+  </header>
+
+  {% if rates %}
+    <p class="table-hint">Cuộn ngang để xem đầy đủ bảng.</p>
+    <div class="card table-scroll" tabindex="0" role="region" aria-label="Bảng tỷ giá Vietcombank">
+      <table class="data-table fx-table">
+        <thead>
+          <tr>
+            <th scope="col">Mã</th>
+            <th scope="col">Ngoại tệ</th>
+            <th scope="col" class="numeric">Mua tiền mặt</th>
+            <th scope="col" class="numeric">Mua chuyển khoản</th>
+            <th scope="col" class="numeric">Bán</th>
+            <th scope="col">Cập nhật lúc</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for rate in rates %}
+          <tr>
+            <td><span class="fx-code">{{ rate.currency_code }}</span></td>
+            <td>{{ rate.currency_name }}</td>
+            <td class="numeric">{% if rate.cash_buy %}{{ rate.cash_buy.value|floatformat:"-4" }}{% else %}<span class="muted-value">—</span>{% endif %}</td>
+            <td class="numeric">{% if rate.transfer_buy %}{{ rate.transfer_buy.value|floatformat:"-4" }}{% else %}<span class="muted-value">—</span>{% endif %}</td>
+            <td class="numeric">{% if rate.sell %}{{ rate.sell.value|floatformat:"-4" }}{% else %}<span class="muted-value">—</span>{% endif %}</td>
+            <td>{{ rate.effective_at|date:"d/m/Y H:i:s" }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="fx-note">Nguồn: <a href="https://www.vietcombank.com.vn/To-chuc/Doanh-Nghiep/KHTC---Ty-gia">Vietcombank</a>. Tỷ giá chỉ mang tính tham khảo; dữ liệu hiển thị từ lần thu thập gần nhất.</p>
+  {% else %}
+    <section class="card empty-state">
+      <h2>Chưa có tỷ giá</h2>
+      <p>Chạy collector Vietcombank để tải XML và lưu dữ liệu vào PostgreSQL.</p>
+    </section>
+  {% endif %}
+{% endblock %}

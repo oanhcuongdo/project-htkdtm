@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Tổng quan | CafeFlow Market BI{% endblock %}
+{% block section_title %}Tổng quan{% endblock %}
+
+{% block content %}
+  <header class="page-heading overview-hero">
+    <div>
+      <h1>Tổng quan thị trường</h1>
+      <p>Tra cứu giá chỉ báo cà phê ICO và xem tiến độ triển khai các phân hệ.</p>
+    </div>
+    <a class="button" href="{% url 'price-page' %}">Mở bảng giá ICO</a>
+  </header>
+
+  <section class="overview-section" aria-labelledby="market-kpis-title">
+    <h2 id="market-kpis-title">KPI thị trường</h2>
+    <div class="overview-grid">
+      <article class="card overview-panel">
+        <h3>Giá ICO gần nhất</h3>
+        <p class="overview-state">Chưa triển khai</p>
+      </article>
+      <article class="card overview-panel">
+        <h3>Biến động giá</h3>
+        <p class="overview-state">Chưa triển khai</p>
+      </article>
+    </div>
+  </section>
+
+  <div class="overview-grid overview-grid--market">
+    <section class="card overview-panel" aria-labelledby="price-trend-title">
+      <h2 id="price-trend-title">Diễn biến giá</h2>
+      <p class="overview-state">Biểu đồ chưa triển khai.</p>
+    </section>
+    <section class="card overview-panel" aria-labelledby="source-status-title">
+      <h2 id="source-status-title">Tình trạng nguồn</h2>
+      <p class="overview-state">Theo dõi nguồn trên trang tổng quan chưa triển khai.</p>
+    </section>
+  </div>
+
+  <section class="card overview-panel overview-section" aria-labelledby="workflows-title">
+    <h2 id="workflows-title">Phân hệ nghiệp vụ</h2>
+    <p class="overview-state">Các phân hệ sau chưa triển khai.</p>
+    <ul class="overview-modules">
+      <li>Kế hoạch thu mua</li>
+      <li>Tin thị trường</li>
+      <li>Cảnh báo</li>
+      <li>Dashboard BI</li>
+    </ul>
+  </section>
+{% endblock %}

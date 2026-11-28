@@ -1,0 +1,43 @@
+{% load static %}
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}CafeFlow Market BI{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'cafeflow/layout.css' %}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Đến nội dung chính</a>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="{% url 'overview' %}">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span>CafeFlow <span class="brand-caption">Market BI</span></span>
+      </a>
+      <nav aria-label="Điều hướng chính">
+        <ul class="nav-list">
+          <li><a class="nav-item" href="{% url 'overview' %}"{% if request.resolver_match.url_name == 'overview' %} aria-current="page"{% endif %}>Tổng quan</a></li>
+          <li><a class="nav-item" href="{% url 'price-page' %}"{% if request.resolver_match.url_name == 'price-page' %} aria-current="page"{% endif %}>Thị trường</a></li>
+          <li><a class="nav-item" href="{% url 'exchange-rate-page' %}"{% if request.resolver_match.url_name == 'exchange-rate-page' %} aria-current="page"{% endif %}>Tỷ giá</a></li>
+          <li><span class="nav-item nav-item--pending" aria-disabled="true">Kế hoạch thu mua <small>Chưa mở</small></span></li>
+          <li><span class="nav-item nav-item--pending" aria-disabled="true">Tin thị trường <small>Chưa mở</small></span></li>
+          <li><span class="nav-item nav-item--pending" aria-disabled="true">Cảnh báo <small>Chưa mở</small></span></li>
+          <li><span class="nav-item nav-item--pending" aria-disabled="true">Dashboard BI <small>Chưa mở</small></span></li>
+          <li><span class="nav-item nav-item--pending" aria-disabled="true">Nguồn dữ liệu <small>Chưa mở</small></span></li>
+          <li><a class="nav-item" href="{% url 'wagtailadmin_home' %}">Quản trị</a></li>
+        </ul>
+      </nav>
+    </aside>
+    <div class="workspace">
+      <header class="topbar">
+        <div class="content-width">{% block section_title %}CafeFlow Market BI{% endblock %}</div>
+      </header>
+      <main id="main-content" class="main-content content-width" tabindex="-1">
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+</body>
+</html>

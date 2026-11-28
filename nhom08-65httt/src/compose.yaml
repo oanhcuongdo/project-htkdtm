@@ -1,0 +1,38 @@
+name: cafeflow-nhom08
+
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-cafeflow}
+      POSTGRES_USER: ${POSTGRES_USER:-cafeflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  web:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Set DJANGO_SECRET_KEY in .env}
+      DJANGO_DEBUG: "1"
+      POSTGRES_DB: ${POSTGRES_DB:-cafeflow}
+      POSTGRES_USER: ${POSTGRES_USER:-cafeflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_HOST: db
+      VCB_XML_URL: ${VCB_XML_URL:-https://portal.vietcombank.com.vn/Usercontrols/TVPortal.TyGia/pXML.aspx?b=10}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${DJANGO_PORT:-8000}:8000"
+    command: ["sh", "-c", "python manage.py migrate --noinput && python manage.py runserver 0.0.0.0:8000 --noreload"]
+
+volumes:
+  postgres-data:

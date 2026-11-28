@@ -1,0 +1,35 @@
+# Cấu hình môi trường cục bộ
+.env
+.env.*
+!.env.example
+
+# Môi trường ảo và cache Python
+.venv/
+.virtualenv/
+venv/
+env/
+ENV/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.cache/
+
+# Tệp khóa Word và nhật ký
+~$*.docx
+~$*.doc
+*.log
+*.log.*
+logs/
+
+# Dữ liệu tải thử và môi trường kiểm chứng
+/.verification/
+/data/
+/src/data/
+/src/backend/data/
+downloads/
+.ico-verification.pdf
+ico.pdf
+ico-october.pdf
+vcb.xml

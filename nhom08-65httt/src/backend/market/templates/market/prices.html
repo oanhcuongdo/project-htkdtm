@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Giá cà phê | CafeFlow Market BI{% endblock %}
+{% block section_title %}Thị trường{% endblock %}
+
+{% block content %}
+  <header class="page-heading">
+    <div>
+      <h1>Giá cà phê</h1>
+      <p>25 quan sát mới nhất theo ngày hiệu lực. Thời điểm thu thập hiển thị theo giờ Việt Nam.</p>
+    </div>
+    <a class="button" href="{% url 'price-list' %}?format=json">Xem dữ liệu JSON</a>
+  </header>
+  {% if prices %}
+    <p class="table-hint">Cuộn ngang để xem đầy đủ bảng.</p>
+    <div class="card table-scroll" tabindex="0" role="region" aria-label="Bảng giá cà phê">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th scope="col">Ngày hiệu lực</th>
+            <th scope="col">Chuỗi giá</th>
+            <th scope="col" class="numeric">Giá</th>
+            <th scope="col">Đơn vị</th>
+            <th scope="col">Loại giá</th>
+            <th scope="col">Nguồn</th>
+            <th scope="col">Thu thập</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for price in prices %}
+          <tr>
+            <td>{{ price.effective_date|date:"d/m/Y" }}</td>
+            <td class="series-name">{{ price.series.name }}</td>
+            <td class="numeric">{{ price.value|floatformat:"-4" }}</td>
+            <td>{% if price.series.unit == "usd_cent_per_lb" %}US cents/lb{% else %}{{ price.series.unit }}{% endif %}</td>
+            <td><span class="status">{{ price.series.get_price_type_display }}</span></td>
+            <td><a href="{{ price.run.source_url }}">{{ price.series.source.name }}</a></td>
+            <td>{{ price.run.collected_at|date:"d/m/Y H:i:s" }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <section class="card empty-state">
+      <h2>Chưa có quan sát giá</h2>
+      <p>Kiểm tra nhật ký collector sau khi chạy tác vụ ICO.</p>
+    </section>
+  {% endif %}
+{% endblock %}
