@@ -3,9 +3,8 @@ import { Link } from "react-router-dom";
 import { listVendorOrders as listOrders } from "../../api/vendor";
 import { usePublicData as useRemoteData } from "../../hooks/usePublicData";
 import { useAuth } from "../../hooks/useAuth";
-import { formatPrice } from "../../utils/catalog";
-import { orderTime } from "../../utils/orders";
-import OrderStatusBadge from "../../components/order/OrderStatusBadge";
+
+import OrderCard from "../../components/order/OrderCard";
 import OrderError from "../../components/order/OrderError";
 import "../customer/orders.css";
 
@@ -62,38 +61,11 @@ function OrderList() {
             ) : (
               <div className="order-list">
                 {result.data.slice(0, 10).map((order) => (
-                  <article className="order-list-card" key={order.id}>
-                    <div className="order-list-top">
-                      <h2>
-                        <Link to={`/vendor/orders/${order.id}`}>
-                          Đơn #{order.id}
-                        </Link>
-                      </h2>
-                      <OrderStatusBadge status={order.status} />
-                    </div>
-                    <time dateTime={order.created_at}>
-                      {orderTime(order.created_at)} · Giờ Việt Nam
-                    </time>
-                    <p className="order-list-items">
-                      {order.items
-                        .map(
-                          (item) => `${item.snapshot_name} × ${item.quantity}`,
-                        )
-                        .join(", ")}
-                    </p>
-                    <p className="order-list-address">
-                      Giao đến: {order.delivery_address}
-                    </p>
-                    <div className="order-list-bottom">
-                      <strong>{formatPrice(order.total)}</strong>
-                      <Link
-                        to={`/vendor/orders/${order.id}`}
-                        aria-label={`Xem đơn ${order.id}`}
-                      >
-                        Xem chi tiết <span aria-hidden="true">↗</span>
-                      </Link>
-                    </div>
-                  </article>
+                  <OrderCard
+                    key={order.id}
+                    order={order}
+                    detailPath={`/vendor/orders/${order.id}`}
+                  />
                 ))}
               </div>
             )}

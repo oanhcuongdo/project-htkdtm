@@ -277,6 +277,12 @@ CartPage và CartDrawer cùng dùng `components/cart/CartItem.tsx` để hiển 
 
 378 kiểm thử hồi quy và hai Playwright adminDashboard đạt với API kiểm soát; không tràn ngang 360/390/768/1280px, TypeScript/lint/build đạt. Chưa kiểm chứng backend/PostgreSQL thật.
 
+## Hoàn thiện component chung — F.12.22
+
+OrderCard dùng chung cho hai danh sách đơn, nhận đường chi tiết theo vai trò và dùng snapshot/giá máy chủ. NotFoundPage là trang 404 riêng. AddressFallback giữ form tên địa điểm/tọa độ, validation/focus; LocationPicker vẫn điều phối định vị và xóa vị trí, reset form dự phòng khi xóa. Chưa có geocoding hoặc MapView. Đây là ba việc gom chung một đợt commit.
+
+Tám Playwright search/orders/vendorOrders/commonNavigation đạt với API kiểm soát; TypeScript/lint/build đạt. Unit test lượt này bị chặn khởi động: Windows Application Control không cho nạp native binding Rolldown. Mốc 378 unit/UI thuộc lượt trước; cần chạy lại Vitest trong môi trường cho phép trước khi xác nhận toàn bộ kiểm thử. Không đổi dependencies để vượt chính sách hệ thống.
+
 ## Auth đã triển khai
 
 | Route | Nội dung hiện có |
